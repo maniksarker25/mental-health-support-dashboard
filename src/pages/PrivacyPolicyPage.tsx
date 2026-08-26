@@ -6,7 +6,6 @@ import { Card, SectionTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { JoditRichText } from '../components/ui/JoditRichText';
-import { ComplianceMonitor } from '../components/legal/ComplianceMonitor';
 import { dateTime } from '../utils/format';
 
 export function PrivacyPolicyPage() {
@@ -67,8 +66,6 @@ export function PrivacyPolicyPage() {
           Jodit output is sanitized semantic HTML, compatible with mobile app renderers.
         </p>
       </div>
-
-      <ComplianceMonitor />
 
       <Card className="px-5 py-4">
         <p className="text-[12.5px] leading-relaxed text-body">

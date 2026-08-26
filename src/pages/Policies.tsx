@@ -7,7 +7,6 @@ import { Card, SectionTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { JoditRichText } from '../components/ui/JoditRichText';
-import { ComplianceMonitor } from '../components/legal/ComplianceMonitor';
 import { HotlineEditor } from '../components/legal/HotlineEditor';
 import { dateTime } from '../utils/format';
 import { cn } from '../utils/cn';
@@ -98,10 +97,7 @@ export function PoliciesPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <ComplianceMonitor />
-        <HotlineEditor />
-      </div>
+      <HotlineEditor />
 
       <Card className="px-5 py-4">
         <p className="text-[12.5px] leading-relaxed text-body">
