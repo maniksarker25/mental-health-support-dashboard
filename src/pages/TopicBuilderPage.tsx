@@ -212,7 +212,7 @@ export function TopicBuilderPage() {
                 options={[
                   { value: 'basic', label: '1. Basic Info & Tone' },
                   { value: 'sections', label: `2. Sections (${(draft.sections || []).length})` },
-                  { value: 'safety', label: '3. Safety & Review' },
+                  { value: 'safety', label: '3. Safety & Disclaimer' },
                   { value: 'seo', label: '4. SEO & Share' },
                 ]}
               />
@@ -333,7 +333,7 @@ export function TopicBuilderPage() {
               />
             )}
 
-            {/* TAB 3: SAFETY & CLINICAL REVIEW */}
+            {/* TAB 3: SAFETY & DISCLAIMER */}
             {tab === 'safety' && (
               <div className="space-y-5">
                 <div className="rounded-xl border border-line bg-surface p-5 space-y-4">
@@ -374,69 +374,6 @@ export function TopicBuilderPage() {
                       }
                       placeholder="Medical disclaimer..."
                     />
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-line bg-surface p-5 space-y-4">
-                  <h4 className="text-sm font-semibold text-ink">Clinical Review Sign-off</h4>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div>
-                      <Label htmlFor="b-rev-status">Review Status</Label>
-                      <Select
-                        id="b-rev-status"
-                        value={draft.review?.reviewStatus || 'pending'}
-                        onChange={(e) =>
-                          patch({
-                            review: {
-                              ...draft.review,
-                              reviewStatus: e.target.value as any,
-                            },
-                          })
-                        }
-                      >
-                        <option value="pending">Pending Review</option>
-                        <option value="approved">Approved & Verified</option>
-                        <option value="rejected">Revision Requested</option>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="b-rev-by">Reviewer Name</Label>
-                      <Input
-                        id="b-rev-by"
-                        value={draft.review?.reviewedBy || ''}
-                        onChange={(e) =>
-                          patch({
-                            review: {
-                              ...draft.review,
-                              reviewedBy: e.target.value,
-                            },
-                          })
-                        }
-                        placeholder="Dr. Sarah Jenkins, PsyD"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="b-rev-date">Review Date</Label>
-                      <Input
-                        id="b-rev-date"
-                        type="date"
-                        value={
-                          draft.review?.reviewedAt
-                            ? new Date(draft.review.reviewedAt).toISOString().split('T')[0]
-                            : new Date().toISOString().split('T')[0]
-                        }
-                        onChange={(e) =>
-                          patch({
-                            review: {
-                              ...draft.review,
-                              reviewedAt: new Date(e.target.value).toISOString(),
-                            },
-                          })
-                        }
-                      />
-                    </div>
                   </div>
                 </div>
               </div>

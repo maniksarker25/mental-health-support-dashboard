@@ -160,7 +160,6 @@ export function TopicsPage() {
                   <Th>Tone</Th>
                   <Th>Resource Webpage</Th>
                   <Th align="center">Sections</Th>
-                  <Th>Clinical Review</Th>
                   <Th>Status</Th>
                   <Th>Updated</Th>
                   <Th align="right">Actions</Th>
@@ -215,18 +214,6 @@ export function TopicsPage() {
                           <LayersIcon className="h-3 w-3 text-subtle" />
                           {sectionsCount}
                         </span>
-                      </Td>
-
-                      <Td>
-                        {topic.review?.reviewStatus === 'approved' ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                            <ShieldCheckIcon className="h-3 w-3" /> Approved
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                            Pending Review
-                          </span>
-                        )}
                       </Td>
 
                       <Td>

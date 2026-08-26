@@ -16,7 +16,7 @@ export const kpis: Kpi[] = [
   value: '8',
   delta: '2 drafts',
   direction: 'flat',
-  caption: '6 published, 2 in review',
+  caption: '6 published, 2 drafts',
   icon: 'Library'
 },
 {

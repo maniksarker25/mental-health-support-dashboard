@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   GaugeIcon,
   LibraryIcon,
@@ -7,9 +7,10 @@ import {
   SettingsIcon,
   ShieldCheckIcon,
   HelpCircleIcon,
-  FileTextIcon,
   HeartIcon,
+  LogOutIcon,
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../utils/cn';
 
 const NAV = [
@@ -22,6 +23,14 @@ const NAV = [
 ];
 
 export function Sidebar() {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <aside className="hidden w-[248px] shrink-0 flex-col border-r border-line bg-surface lg:flex">
       <div className="flex items-center gap-2.5 px-5 py-5">
@@ -61,6 +70,18 @@ export function Sidebar() {
         </ul>
       </nav>
 
+      {/* Logout button in sidebar footer */}
+      <div className="px-3 pb-1">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium text-subtle transition-colors duration-150 ease-calm hover:bg-danger-bg hover:text-danger"
+        >
+          <LogOutIcon className="h-4 w-4 shrink-0" />
+          <span>Sign Out</span>
+        </button>
+      </div>
+
       <div className="m-3 rounded-xl border border-line bg-canvas p-3.5">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
@@ -78,6 +99,9 @@ export function Sidebar() {
 }
 
 export function MobileNav() {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
   return (
     <nav
       className="flex gap-1 overflow-x-auto border-b border-line bg-surface px-3 py-2 lg:hidden"
@@ -99,6 +123,18 @@ export function MobileNav() {
           <span className="sr-only">{label}</span>
         </NavLink>
       ))}
+
+      <button
+        type="button"
+        onClick={() => {
+          logout();
+          navigate('/login');
+        }}
+        className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger-bg"
+      >
+        <LogOutIcon className="h-3.5 w-3.5" />
+        <span>Out</span>
+      </button>
     </nav>
   );
 }

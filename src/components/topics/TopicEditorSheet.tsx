@@ -232,7 +232,7 @@ export function TopicEditorSheet({
               options={[
                 { value: 'basic', label: '1. Basic Info & Style' },
                 { value: 'sections', label: `2. Content Sections (${(draft.sections || []).length})` },
-                { value: 'safety', label: '3. Safety & Review' },
+                { value: 'safety', label: '3. Safety & Disclaimer' },
                 { value: 'seo', label: '4. SEO & Metadata' },
               ]}
             />
@@ -404,69 +404,6 @@ export function TopicEditorSheet({
                     }
                     placeholder="This resource is educational and not medical advice..."
                   />
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-line bg-surface p-5 space-y-4">
-                <h4 className="text-sm font-semibold text-ink">Clinical Review Sign-off</h4>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <div>
-                    <Label htmlFor="rev-status">Review Status</Label>
-                    <Select
-                      id="rev-status"
-                      value={draft.review?.reviewStatus || 'pending'}
-                      onChange={(e) =>
-                        patch({
-                          review: {
-                            ...draft.review,
-                            reviewStatus: e.target.value as any,
-                          },
-                        })
-                      }
-                    >
-                      <option value="pending">Pending Clinical Review</option>
-                      <option value="approved">Approved & Verified</option>
-                      <option value="rejected">Revision Requested</option>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="rev-by">Reviewed By (Clinician / Lead)</Label>
-                    <Input
-                      id="rev-by"
-                      value={draft.review?.reviewedBy || ''}
-                      onChange={(e) =>
-                        patch({
-                          review: {
-                            ...draft.review,
-                            reviewedBy: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Dr. Sarah Jenkins, PsyD"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="rev-date">Review Date</Label>
-                    <Input
-                      id="rev-date"
-                      type="date"
-                      value={
-                        draft.review?.reviewedAt
-                          ? new Date(draft.review.reviewedAt).toISOString().split('T')[0]
-                          : new Date().toISOString().split('T')[0]
-                      }
-                      onChange={(e) =>
-                        patch({
-                          review: {
-                            ...draft.review,
-                            reviewedAt: new Date(e.target.value).toISOString(),
-                          },
-                        })
-                      }
-                    />
-                  </div>
                 </div>
               </div>
             </div>

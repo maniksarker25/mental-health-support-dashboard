@@ -40,10 +40,12 @@ export function AdminProfileCard() {
         title="Admin information"
         description="Used for sign-in and for the signature on outbound replies."
         action={
-        <Badge tone="primary">
-            <ShieldCheckIcon className="h-3 w-3" />
-            {profile.role}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge tone="primary">
+              <ShieldCheckIcon className="h-3 w-3" />
+              {profile.role}
+            </Badge>
+          </div>
         } />
       
 

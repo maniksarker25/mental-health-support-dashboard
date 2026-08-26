@@ -93,11 +93,6 @@ export function ResourceWebsiteRenderer({ resource, isMobilePreview = false }: R
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            {resource.review?.reviewStatus === 'approved' && !isMobilePreview ? (
-              <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                <ShieldCheckIcon className="h-3 w-3" /> Reviewed
-              </span>
-            ) : null}
             <span
               className={cn(
                 'rounded-full border border-line bg-canvas font-medium text-body',

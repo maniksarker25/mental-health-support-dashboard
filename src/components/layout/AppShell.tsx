@@ -3,11 +3,14 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { MobileNav, Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 
-const META: Record<string, {eyebrow: string;title: string;}> = {
+const META: Record<string, { eyebrow: string; title: string }> = {
   '/dashboard': { eyebrow: 'Overview', title: 'Executive dashboard' },
-  '/topics': { eyebrow: 'Content', title: 'Topics, packets & articles' },
-  '/policies': { eyebrow: 'Compliance', title: 'Policies & FAQ' },
-  '/settings': { eyebrow: 'Account', title: 'Settings' }
+  '/topics': { eyebrow: 'Content', title: 'Topics & Resource Webpages' },
+  '/topics/new': { eyebrow: 'Builder', title: 'Create Topic & Resource' },
+  '/privacy': { eyebrow: 'Compliance', title: 'Privacy Policy & Zero-Retention Architecture' },
+  '/terms': { eyebrow: 'Legal & Clinical', title: 'Terms of Service & Boundary Agreement' },
+  '/faq': { eyebrow: 'Help Center', title: 'Frequently Asked Questions (FAQ)' },
+  '/settings': { eyebrow: 'Account', title: 'Settings & Emergency Hotlines' },
 };
 
 export function AppShell() {
