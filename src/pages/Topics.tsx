@@ -31,7 +31,7 @@ import { cn } from '../utils/cn';
 
 export function TopicsPage() {
   const navigate = useNavigate();
-  const { topics, saveTopic, deleteTopic, duplicateTopic } = useAdminStore();
+  const { topics, saveTopic, deleteTopic, } = useAdminStore();
   const loading = useSimulatedLoad(500);
   const table = useTableState(6);
 
@@ -223,7 +223,7 @@ export function TopicsPage() {
                       </Td>
 
                       <Td className="whitespace-nowrap text-[12.5px] text-subtle">
-                        {relativeTime(topic.updatedAt)}
+                        {relativeTime(topic.updatedAt as string)}
                       </Td>
 
                       <Td align="right">
@@ -255,19 +255,6 @@ export function TopicsPage() {
                               className="rounded-md p-1.5 text-body transition-colors hover:bg-primary-tint hover:text-primary"
                             >
                               <PencilIcon className="h-3.5 w-3.5" />
-                            </button>
-                          </Tooltip>
-
-                          <Tooltip label="Duplicate">
-                            <button
-                              onClick={() => {
-                                const copy = duplicateTopic(topic.id);
-                                if (copy) toast.success(`Duplicated as “${copy.topicTitle || copy.title}” (draft)`);
-                              }}
-                              aria-label={`Duplicate ${name}`}
-                              className="rounded-md p-1.5 text-body transition-colors hover:bg-primary-tint hover:text-primary"
-                            >
-                              <CopyIcon className="h-3.5 w-3.5" />
                             </button>
                           </Tooltip>
 
