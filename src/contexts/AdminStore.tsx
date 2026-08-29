@@ -2,7 +2,21 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 import { initialTopics } from '../data/topics';
 import { initialHotlines, initialLegalDocs } from '../data/legal';
 import { initialProfile } from '../data/system';
-import type { AdminProfile, Hotline, LegalDoc, LegalDocId, Topic } from '../types';
+import { initialUsers } from '../data/users';
+import { initialMessages } from '../data/messages';
+import { initialReports } from '../data/reports';
+import type {
+  AdminMessage,
+  AdminProfile,
+  AppUser,
+  Hotline,
+  LegalDoc,
+  LegalDocId,
+  MessageReport,
+  ReportReasonCategory,
+  Topic,
+  UserStatus,
+} from '../types';
 
 interface AdminStoreValue {
   topics: Topic[];
@@ -19,7 +33,37 @@ interface AdminStoreValue {
   profile: AdminProfile;
   saveProfile: (profile: AdminProfile) => void;
   passwordUpdatedAt: string;
-  changePassword: (current: string, next: string) => {ok: boolean;message: string;};
+  changePassword: (current: string, next: string) => { ok: boolean; message: string };
+
+  // User Management
+  users: AppUser[];
+  toggleUserBlock: (userId: string, reason?: string) => void;
+  setUserStatus: (userId: string, status: UserStatus, reason?: string) => void;
+  addUser: (user: Partial<AppUser> & { name: string; email: string; phone: string }) => AppUser;
+  deleteUser: (userId: string) => void;
+
+  // Message Moderation
+  messages: AdminMessage[];
+  approveMessage: (messageId: string) => void;
+  rejectMessage: (messageId: string, reason?: string) => void;
+  approveAllPendingMessages: () => number;
+  deleteMessage: (messageId: string) => void;
+
+  // Report Management
+  reports: MessageReport[];
+  submitReport: (report: {
+    reportedPersonName: string;
+    reportedPersonContact: string;
+    reportedByContact: string;
+    reportedByChannel: 'sms' | 'email';
+    topicTitle: string;
+    reasonCategory: ReportReasonCategory;
+    reasonText: string;
+    messageId?: string;
+  }) => MessageReport;
+  resolveReport: (reportId: string, notes?: string) => void;
+  dismissReport: (reportId: string, notes?: string) => void;
+  blockReportedUser: (reportId: string, reason?: string) => void;
 }
 
 const AdminStoreContext = createContext<AdminStoreValue | null>(null);
@@ -30,7 +74,7 @@ const DEMO_PASSWORD = 'Anonymous2026!';
 const nowIso = () => new Date().toISOString();
 const uid = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 
-export function AdminStoreProvider({ children }: {children: React.ReactNode;}) {
+export function AdminStoreProvider({ children }: { children: React.ReactNode }) {
   const [topics, setTopics] = useState<Topic[]>(initialTopics);
   const [legalDocs, setLegalDocs] = useState<LegalDoc[]>(initialLegalDocs);
   const [hotlines, setHotlines] = useState<Hotline[]>(initialHotlines);
@@ -38,11 +82,16 @@ export function AdminStoreProvider({ children }: {children: React.ReactNode;}) {
   const [password, setPassword] = useState(DEMO_PASSWORD);
   const [passwordUpdatedAt, setPasswordUpdatedAt] = useState('2026-06-02T10:12:00Z');
 
+  // New Entities
+  const [users, setUsers] = useState<AppUser[]>(initialUsers);
+  const [messages, setMessages] = useState<AdminMessage[]>(initialMessages);
+  const [reports, setReports] = useState<MessageReport[]>(initialReports);
+
   const saveTopic = useCallback((topic: Topic) => {
     setTopics((prev) => {
       const stamped = { ...topic, updatedAt: nowIso() };
       const exists = prev.some((t) => t.id === topic.id);
-      return exists ? prev.map((t) => t.id === topic.id ? stamped : t) : [stamped, ...prev];
+      return exists ? prev.map((t) => (t.id === topic.id ? stamped : t)) : [stamped, ...prev];
     });
   }, []);
 
@@ -79,22 +128,22 @@ export function AdminStoreProvider({ children }: {children: React.ReactNode;}) {
   );
 
   const saveLegalDoc = useCallback((id: LegalDocId, html: string) => {
-    setLegalDocs((prev) => prev.map((d) => d.id === id ? { ...d, html, updatedAt: nowIso() } : d));
+    setLegalDocs((prev) => prev.map((d) => (d.id === id ? { ...d, html, updatedAt: nowIso() } : d)));
   }, []);
 
   const saveHotline = useCallback((hotline: Hotline) => {
-    setHotlines((prev) => prev.map((h) => h.id === hotline.id ? hotline : h));
+    setHotlines((prev) => prev.map((h) => (h.id === hotline.id ? hotline : h)));
   }, []);
 
   const saveProfile = useCallback((next: AdminProfile) => {
     setProfile({
       ...next,
-      initials: next.name.
-      split(' ').
-      filter(Boolean).
-      map((part) => part[0]?.toUpperCase() ?? '').
-      slice(0, 2).
-      join('')
+      initials: next.name
+        .split(' ')
+        .filter(Boolean)
+        .map((part) => part[0]?.toUpperCase() ?? '')
+        .slice(0, 2)
+        .join(''),
     });
   }, []);
 
@@ -113,6 +162,267 @@ export function AdminStoreProvider({ children }: {children: React.ReactNode;}) {
     [password]
   );
 
+  // -------------------------------------------------------------
+  // User Management Actions
+  // -------------------------------------------------------------
+  const toggleUserBlock = useCallback((userId: string, reason?: string) => {
+    setUsers((prev) =>
+      prev.map((user) => {
+        if (user.id !== userId) return user;
+        const willBlock = user.status !== 'blocked';
+        return {
+          ...user,
+          status: willBlock ? 'blocked' : 'active',
+          blockedAt: willBlock ? nowIso() : undefined,
+          blockedReason: willBlock ? reason || 'Blocked by administrator' : undefined,
+        };
+      })
+    );
+  }, []);
+
+  const setUserStatus = useCallback((userId: string, status: UserStatus, reason?: string) => {
+    setUsers((prev) =>
+      prev.map((user) => {
+        if (user.id !== userId) return user;
+        return {
+          ...user,
+          status,
+          blockedAt: status === 'blocked' ? nowIso() : undefined,
+          blockedReason: status === 'blocked' ? reason || 'Blocked by administrator' : undefined,
+        };
+      })
+    );
+  }, []);
+
+  const addUser = useCallback((data: Partial<AppUser> & { name: string; email: string; phone: string }) => {
+    const newUser: AppUser = {
+      id: uid('usr'),
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      initials: data.name
+        .split(' ')
+        .filter(Boolean)
+        .map((p) => p[0]?.toUpperCase() ?? '')
+        .slice(0, 2)
+        .join('') || 'U',
+      role: data.role || 'member',
+      status: 'active',
+      joinedAt: nowIso(),
+      lastActiveAt: nowIso(),
+      messagesSentCount: 0,
+      reportsReceivedCount: 0,
+      notes: data.notes,
+    };
+    setUsers((prev) => [newUser, ...prev]);
+    return newUser;
+  }, []);
+
+  const deleteUser = useCallback((userId: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== userId));
+  }, []);
+
+  // -------------------------------------------------------------
+  // Message Moderation Actions
+  // -------------------------------------------------------------
+  const approveMessage = useCallback((messageId: string) => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? {
+              ...msg,
+              status: 'approved',
+              approvedAt: nowIso(),
+              approvedBy: 'Admin Console',
+              rejectionReason: undefined,
+            }
+          : msg
+      )
+    );
+  }, []);
+
+  const rejectMessage = useCallback((messageId: string, reason?: string) => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? {
+              ...msg,
+              status: 'rejected',
+              rejectionReason: reason || 'Declined by administrator during safety moderation review.',
+            }
+          : msg
+      )
+    );
+  }, []);
+
+  const approveAllPendingMessages = useCallback(() => {
+    let count = 0;
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.status === 'pending') {
+          count++;
+          return {
+            ...msg,
+            status: 'approved',
+            approvedAt: nowIso(),
+            approvedBy: 'Admin Console (Batch)',
+          };
+        }
+        return msg;
+      })
+    );
+    return count;
+  }, []);
+
+  const deleteMessage = useCallback((messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+  }, []);
+
+  // -------------------------------------------------------------
+  // Report Management Actions
+  // -------------------------------------------------------------
+  const submitReport = useCallback(
+    (reportData: {
+      reportedPersonName: string;
+      reportedPersonContact: string;
+      reportedByContact: string;
+      reportedByChannel: 'sms' | 'email';
+      topicTitle: string;
+      reasonCategory: ReportReasonCategory;
+      reasonText: string;
+      messageId?: string;
+    }) => {
+      // Find matching user ID if exists
+      const matchUser = users.find(
+        (u) =>
+          u.email.toLowerCase() === reportData.reportedPersonContact.toLowerCase() ||
+          u.phone === reportData.reportedPersonContact ||
+          u.name.toLowerCase() === reportData.reportedPersonName.toLowerCase()
+      );
+
+      const newReport: MessageReport = {
+        id: uid('rep'),
+        messageId: reportData.messageId,
+        reportedPersonId: matchUser?.id || uid('usr-reported'),
+        reportedPersonName: reportData.reportedPersonName || matchUser?.name || 'Sender',
+        reportedPersonContact: reportData.reportedPersonContact || matchUser?.email || matchUser?.phone || 'Unknown Contact',
+        reportedByContact: reportData.reportedByContact || 'Anonymous Recipient',
+        reportedByChannel: reportData.reportedByChannel,
+        topicTitle: reportData.topicTitle,
+        reasonCategory: reportData.reasonCategory,
+        reasonText: reportData.reasonText,
+        reportedAt: nowIso(),
+        status: 'new',
+      };
+
+      setReports((prev) => [newReport, ...prev]);
+
+      // If user found, increment their reportsReceivedCount
+      if (matchUser) {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === matchUser.id ? { ...u, reportsReceivedCount: (u.reportsReceivedCount || 0) + 1 } : u
+          )
+        );
+      }
+
+      return newReport;
+    },
+    [users]
+  );
+
+  const resolveReport = useCallback((reportId: string, notes?: string) => {
+    setReports((prev) =>
+      prev.map((rep) =>
+        rep.id === reportId
+          ? {
+              ...rep,
+              status: 'resolved',
+              resolutionNotes: notes || 'Reviewed and resolved by administrator.',
+              resolvedAt: nowIso(),
+            }
+          : rep
+      )
+    );
+  }, []);
+
+  const dismissReport = useCallback((reportId: string, notes?: string) => {
+    setReports((prev) =>
+      prev.map((rep) =>
+        rep.id === reportId
+          ? {
+              ...rep,
+              status: 'resolved',
+              resolutionNotes: notes || 'Dismissed as false alarm or duplicate (Resolved).',
+              resolvedAt: nowIso(),
+            }
+          : rep
+      )
+    );
+  }, []);
+
+
+  const blockReportedUser = useCallback(
+    (reportId: string, reason?: string) => {
+      const report = reports.find((r) => r.id === reportId);
+      if (!report) return;
+
+      const blockExplanation =
+        reason || `Blocked following incident report (${report.reasonCategory}): ${report.reasonText}`;
+
+      // 1. Block matching user in users state
+      setUsers((prev) =>
+        prev.map((u) => {
+          const isMatch =
+            u.id === report.reportedPersonId ||
+            u.email.toLowerCase() === report.reportedPersonContact.toLowerCase() ||
+            u.phone === report.reportedPersonContact ||
+            u.name.toLowerCase() === report.reportedPersonName.toLowerCase();
+          if (!isMatch) return u;
+          return {
+            ...u,
+            status: 'blocked',
+            blockedAt: nowIso(),
+            blockedReason: blockExplanation,
+          };
+        })
+      );
+
+      // 2. Reject any pending messages from this sender
+      setMessages((prev) =>
+        prev.map((msg) => {
+          const isSender =
+            msg.senderId === report.reportedPersonId ||
+            msg.senderEmail.toLowerCase() === report.reportedPersonContact.toLowerCase() ||
+            msg.senderName.toLowerCase() === report.reportedPersonName.toLowerCase();
+          if (isSender && msg.status === 'pending') {
+            return {
+              ...msg,
+              status: 'rejected',
+              rejectionReason: 'Sender account blocked due to receiver report violation.',
+            };
+          }
+          return msg;
+        })
+      );
+
+      // 3. Mark the report as resolved with user blocked note
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === reportId
+            ? {
+                ...r,
+                status: 'resolved',
+                resolutionNotes: `Reported sender was blocked. ${blockExplanation}`,
+                resolvedAt: nowIso(),
+              }
+            : r
+        )
+      );
+    },
+    [reports]
+  );
+
   const value = useMemo<AdminStoreValue>(
     () => ({
       topics,
@@ -126,22 +436,55 @@ export function AdminStoreProvider({ children }: {children: React.ReactNode;}) {
       profile,
       saveProfile,
       passwordUpdatedAt,
-      changePassword
+      changePassword,
+      // Users
+      users,
+      toggleUserBlock,
+      setUserStatus,
+      addUser,
+      deleteUser,
+      // Messages
+      messages,
+      approveMessage,
+      rejectMessage,
+      approveAllPendingMessages,
+      deleteMessage,
+      // Reports
+      reports,
+      submitReport,
+      resolveReport,
+      dismissReport,
+      blockReportedUser,
     }),
     [
-    topics,
-    saveTopic,
-    deleteTopic,
-    duplicateTopic,
-    legalDocs,
-    saveLegalDoc,
-    hotlines,
-    saveHotline,
-    profile,
-    saveProfile,
-    passwordUpdatedAt,
-    changePassword]
-
+      topics,
+      saveTopic,
+      deleteTopic,
+      duplicateTopic,
+      legalDocs,
+      saveLegalDoc,
+      hotlines,
+      saveHotline,
+      profile,
+      saveProfile,
+      passwordUpdatedAt,
+      changePassword,
+      users,
+      toggleUserBlock,
+      setUserStatus,
+      addUser,
+      deleteUser,
+      messages,
+      approveMessage,
+      rejectMessage,
+      approveAllPendingMessages,
+      deleteMessage,
+      reports,
+      submitReport,
+      resolveReport,
+      dismissReport,
+      blockReportedUser,
+    ]
   );
 
   return <AdminStoreContext.Provider value={value}>{children}</AdminStoreContext.Provider>;

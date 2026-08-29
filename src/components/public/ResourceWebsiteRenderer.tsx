@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import {
   ShieldAlertIcon,
   PhoneCallIcon,
@@ -18,15 +19,19 @@ import {
   RotateCcwIcon,
   CheckCircle2Icon,
   XCircleIcon,
+  FlagIcon,
+  XIcon,
 } from 'lucide-react';
 import type {
   TopicAndResource,
   ResourceLayoutStyle,
   IGroundingContent,
   IMythsFactsContent,
+  ReportReasonCategory,
 } from '../../types';
 import { TONE_META } from '../../data/topics';
 import { DynamicIcon } from '../ui/DynamicIcon';
+import { useAdminStore } from '../../contexts/AdminStore';
 import { cn } from '../../utils/cn';
 
 interface ResourceWebsiteRendererProps {
@@ -37,11 +42,53 @@ interface ResourceWebsiteRendererProps {
 export function ResourceWebsiteRenderer({ resource, isMobilePreview = false }: ResourceWebsiteRendererProps) {
   const tone = TONE_META[resource.tone] || TONE_META.sky;
   const sections = resource.sections || [];
+  const { submitReport } = useAdminStore();
 
   const [openFaqIds, setOpenFaqIds] = useState<Record<string, boolean>>({});
 
+  // Recipient Report Modal State
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportReasonCategory, setReportReasonCategory] = useState<ReportReasonCategory>('unsolicited');
+  const [reportReasonText, setReportReasonText] = useState('');
+  const [reporterContact, setReporterContact] = useState('');
+  const [reportedPerson, setReportedPerson] = useState('');
+  const [reportChannel, setReportChannel] = useState<'sms' | 'email'>('sms');
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
   const toggleFaq = (id: string) => {
     setOpenFaqIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleSubmitReport = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportReasonText.trim()) {
+      toast.error('Please describe the reason for your report.');
+      return;
+    }
+
+    submitReport({
+      reportedPersonName: reportedPerson.trim() || 'Message Sender',
+      reportedPersonContact: reportedPerson.trim() || 'Confidential Sender',
+      reportedByContact: reporterContact.trim() || 'Anonymous Receiver',
+      reportedByChannel: reportChannel,
+      topicTitle: resource.topicTitle || resource.title || 'Support Resource',
+      reasonCategory: reportReasonCategory,
+      reasonText: reportReasonText.trim(),
+    });
+
+    setIsSubmitted(true);
+    toast.success('Your report has been submitted to system moderators.');
+  };
+
+  const resetReportForm = () => {
+    setIsReportModalOpen(false);
+    setTimeout(() => {
+      setIsSubmitted(false);
+      setReportReasonText('');
+      setReporterContact('');
+      setReportedPerson('');
+      setReportReasonCategory('unsolicited');
+    }, 300);
   };
 
   const getContainerClass = (style?: ResourceLayoutStyle) => {
@@ -92,7 +139,20 @@ export function ResourceWebsiteRenderer({ resource, isMobilePreview = false }: R
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsReportModalOpen(true)}
+              className={cn(
+                'flex items-center gap-1 rounded-lg border border-line bg-canvas text-subtle hover:text-rose-600 hover:border-rose-300 transition-colors',
+                isMobilePreview ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-[11.5px]'
+              )}
+              title="Report inappropriate message or unwanted contact"
+            >
+              <FlagIcon className="h-3 w-3" />
+              <span>Report</span>
+            </button>
+
             <span
               className={cn(
                 'rounded-full border border-line bg-canvas font-medium text-body',
@@ -104,6 +164,7 @@ export function ResourceWebsiteRenderer({ resource, isMobilePreview = false }: R
           </div>
         </div>
       </header>
+
 
       {/* Main Sections Stream */}
       <main
@@ -821,11 +882,164 @@ export function ResourceWebsiteRenderer({ resource, isMobilePreview = false }: R
 
       {/* Website Footer */}
       <footer className="border-t border-line/70 bg-surface py-6 text-center text-[11px] text-subtle">
-        <div className={cn('mx-auto space-y-1', isMobilePreview ? 'px-3.5' : 'max-w-4xl px-4 sm:px-6')}>
+        <div className={cn('mx-auto space-y-2', isMobilePreview ? 'px-3.5' : 'max-w-4xl px-4 sm:px-6')}>
           <p className="font-medium text-ink">Mental Health Support Resource</p>
           <p>Zero-retention confidential delivery.</p>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setIsReportModalOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-subtle hover:text-rose-600 transition-colors"
+            >
+              <FlagIcon className="h-3.5 w-3.5" />
+              <span>Report this transmission or opt out</span>
+            </button>
+          </div>
         </div>
       </footer>
+
+      {/* Recipient Report Modal */}
+      {isReportModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Report Message"
+        >
+          <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface p-6 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-display text-lg font-bold text-ink">
+                  Report Received Message
+                </h3>
+                <p className="text-xs text-subtle mt-0.5">
+                  If this message was unsolicited, harassing, or inappropriate, let our safety moderators know.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={resetReportForm}
+                className="rounded-lg p-1.5 text-subtle hover:bg-canvas hover:text-ink transition-colors"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            </div>
+
+            {isSubmitted ? (
+              <div className="py-6 text-center space-y-3">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                  <CheckCircle2Icon className="h-6 w-6" />
+                </div>
+                <h4 className="font-bold text-ink text-base">Report Submitted</h4>
+                <p className="text-xs text-body max-w-sm mx-auto leading-relaxed">
+                  Thank you. Your report has been logged in the admin console. Our moderators review reports to suspend offending senders and maintain platform safety.
+                </p>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={resetReportForm}
+                    className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-primary-hover transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitReport} className="space-y-3.5">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-ink">
+                    Reason Category *
+                  </label>
+                  <select
+                    value={reportReasonCategory}
+                    onChange={(e) => setReportReasonCategory(e.target.value as ReportReasonCategory)}
+                    className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:border-primary focus:outline-none"
+                  >
+                    <option value="unsolicited">Unsolicited / Did Not Request This</option>
+                    <option value="harassment">Harassment / Coercive or Abusive</option>
+                    <option value="spam">Commercial Spam / Advertising Link</option>
+                    <option value="distressing">Distressing / Uncomfortable Content</option>
+                    <option value="wrong_number">Wrong Number / Recipient Mistake</option>
+                    <option value="other">Other Concern</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-ink">
+                    Reason Details *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={reportReasonText}
+                    onChange={(e) => setReportReasonText(e.target.value)}
+                    placeholder="Please provide details about what happened..."
+                    className="w-full rounded-lg border border-line bg-surface p-2.5 text-xs text-ink leading-relaxed placeholder:text-subtle focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-ink">
+                      Sender Name / Info (If known)
+                    </label>
+                    <input
+                      type="text"
+                      value={reportedPerson}
+                      onChange={(e) => setReportedPerson(e.target.value)}
+                      placeholder="e.g. John / anonymous"
+                      className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:border-primary focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-ink">
+                      Channel
+                    </label>
+                    <select
+                      value={reportChannel}
+                      onChange={(e) => setReportChannel(e.target.value as 'sms' | 'email')}
+                      className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:border-primary focus:outline-none"
+                    >
+                      <option value="sms">SMS Text Message</option>
+                      <option value="email">Email</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-ink">
+                    Your Phone or Email (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={reporterContact}
+                    onChange={(e) => setReporterContact(e.target.value)}
+                    placeholder="To verify and block this sender from contacting you"
+                    className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-line/60">
+                  <button
+                    type="button"
+                    onClick={resetReportForm}
+                    className="rounded-xl border border-line bg-canvas px-4 py-2 text-xs font-medium text-body hover:text-ink transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-rose-700 active:scale-95 transition-colors"
+                  >
+                    Submit Report
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

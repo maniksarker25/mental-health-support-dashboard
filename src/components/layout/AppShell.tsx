@@ -5,6 +5,9 @@ import { Topbar } from './Topbar';
 
 const META: Record<string, { eyebrow: string; title: string }> = {
   '/dashboard': { eyebrow: 'Overview', title: 'Executive dashboard' },
+  '/users': { eyebrow: 'Directory', title: 'User Management & Access Control' },
+  '/messages': { eyebrow: 'Moderation', title: 'All Messages & Approval Queue' },
+  '/reports': { eyebrow: 'Safety', title: 'Incident & Message Reports' },
   '/topics': { eyebrow: 'Content', title: 'Topics & Resource Webpages' },
   '/topics/new': { eyebrow: 'Builder', title: 'Create Topic & Resource' },
   '/privacy': { eyebrow: 'Compliance', title: 'Privacy Policy & Zero-Retention Architecture' },
@@ -12,6 +15,7 @@ const META: Record<string, { eyebrow: string; title: string }> = {
   '/faq': { eyebrow: 'Help Center', title: 'Frequently Asked Questions (FAQ)' },
   '/settings': { eyebrow: 'Account', title: 'Settings & Emergency Hotlines' },
 };
+
 
 export function AppShell() {
   const { pathname } = useLocation();

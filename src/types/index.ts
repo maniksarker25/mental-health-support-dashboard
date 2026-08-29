@@ -80,3 +80,85 @@ export interface Kpi {
   caption: string;
   icon: string;
 }
+
+// -------------------------------------------------------------
+// User Management Types
+// -------------------------------------------------------------
+export type UserStatus = 'active' | 'blocked' | 'suspended';
+
+export interface AppUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar?: string;
+  initials: string;
+  role: 'member' | 'verified_sender' | 'clinician' | 'caregiver';
+  status: UserStatus;
+  joinedAt: string;
+  lastActiveAt: string;
+  messagesSentCount: number;
+  reportsReceivedCount: number;
+  blockedAt?: string;
+  blockedReason?: string;
+  notes?: string;
+}
+
+// -------------------------------------------------------------
+// Message Approval & Moderation Types
+// -------------------------------------------------------------
+export type MessageApprovalStatus = 'pending' | 'approved' | 'rejected' | 'delivered';
+
+export interface AdminMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderEmail: string;
+  senderPhone?: string;
+  recipientContact: string; // phone number or email address
+  recipientName?: string;
+  recipientRelationship?: string;
+  channel: Channel;
+  topicId: string;
+  topicTitle: string;
+  tone: ToneKey;
+  customNote: string;
+  submittedAt: string;
+  scheduledFor?: string;
+  status: MessageApprovalStatus;
+  rejectionReason?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+}
+
+// -------------------------------------------------------------
+// Report Management Types
+// -------------------------------------------------------------
+export type ReportStatus = 'new' | 'resolved';
+
+
+export type ReportReasonCategory =
+  | 'harassment'
+  | 'unsolicited'
+  | 'distressing'
+  | 'wrong_number'
+  | 'spam'
+  | 'other';
+
+export interface MessageReport {
+  id: string;
+  messageId?: string;
+  reportedPersonId: string;
+  reportedPersonName: string;
+  reportedPersonContact: string; // email or phone
+  reportedByContact: string; // receiver phone or email
+  reportedByChannel: Channel;
+  topicTitle: string;
+  tone?: ToneKey;
+  reasonCategory: ReportReasonCategory;
+  reasonText: string;
+  reportedAt: string;
+  status: ReportStatus;
+  resolutionNotes?: string;
+  resolvedAt?: string;
+}

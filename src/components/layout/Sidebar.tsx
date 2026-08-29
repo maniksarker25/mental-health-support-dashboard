@@ -9,12 +9,18 @@ import {
   HelpCircleIcon,
   HeartIcon,
   LogOutIcon,
+  UsersIcon,
+  MessageSquareIcon,
+  ShieldAlertIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../utils/cn';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: GaugeIcon, hint: 'Overview' },
+  { to: '/users', label: 'User Management', icon: UsersIcon, hint: 'Users' },
+  { to: '/messages', label: 'All Messages', icon: MessageSquareIcon, hint: 'Messages' },
+  { to: '/reports', label: 'Reports', icon: ShieldAlertIcon, hint: 'Reports' },
   { to: '/topics', label: 'Topics & Resources', icon: LibraryIcon, hint: 'Content' },
   { to: '/privacy', label: 'Privacy Policy', icon: ShieldCheckIcon, hint: 'Privacy' },
   { to: '/terms', label: 'Terms of Service', icon: ScaleIcon, hint: 'Terms' },

@@ -9,6 +9,9 @@ import { AppShell } from './components/layout/AppShell';
 import { LoginPage } from './pages/LoginPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { DashboardPage } from './pages/Dashboard';
+import { UserManagementPage } from './pages/UserManagementPage';
+import { AllMessagesPage } from './pages/AllMessagesPage';
+import { ReportManagementPage } from './pages/ReportManagementPage';
 import { TopicsPage } from './pages/Topics';
 import { TopicBuilderPage } from './pages/TopicBuilderPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
@@ -41,6 +44,9 @@ export function App({ initialTheme = 'light' }: AppProps) {
                 <Route element={<AppShell />}>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/users" element={<UserManagementPage />} />
+                  <Route path="/messages" element={<AllMessagesPage />} />
+                  <Route path="/reports" element={<ReportManagementPage />} />
                   <Route path="/topics" element={<TopicsPage />} />
                   <Route path="/topics/new" element={<TopicBuilderPage />} />
                   <Route path="/topics/edit/:id" element={<TopicBuilderPage />} />
@@ -54,6 +60,7 @@ export function App({ initialTheme = 'light' }: AppProps) {
               </Route>
             </Routes>
           </BrowserRouter>
+
           <Toaster
             position="bottom-right"
             toastOptions={{
