@@ -162,3 +162,53 @@ export interface MessageReport {
   resolutionNotes?: string;
   resolvedAt?: string;
 }
+
+// -------------------------------------------------------------
+// Topic & Resource Management Types
+// -------------------------------------------------------------
+export interface IAdminTopic {
+  id: string;
+  name: string;
+  tone: ToneKey;
+  icon: string;
+  description: string;
+  status: 'published' | 'draft';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IArticleResource {
+  id: string;
+  topicId: string;
+  topicName?: string;
+  title: string;
+  shortDescription: string;
+  contentHtml: string;
+  readingTime?: number;
+  featuredImage?: string;
+  status: 'published' | 'draft';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// -------------------------------------------------------------
+// Community Post Moderation Types
+// -------------------------------------------------------------
+export type CommunityPostApprovalStatus = 'pending' | 'approved' | 'rejected' | 'needs_update';
+
+export interface IAdminCommunityPost {
+  id: string;
+  author: string;
+  title: string;
+  content: string;
+  topicTag: string;
+  imageUrl?: string;
+  createdAt: string;
+  likes: number;
+  repliesCount: number;
+  status: CommunityPostApprovalStatus;
+  feedback?: string;
+  rejectionReason?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+}

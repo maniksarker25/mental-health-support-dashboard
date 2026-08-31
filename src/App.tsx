@@ -11,9 +11,11 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { DashboardPage } from './pages/Dashboard';
 import { UserManagementPage } from './pages/UserManagementPage';
 import { AllMessagesPage } from './pages/AllMessagesPage';
+import { CommunityPostsPage } from './pages/CommunityPostsPage';
 import { ReportManagementPage } from './pages/ReportManagementPage';
 import { TopicsPage } from './pages/Topics';
-import { TopicBuilderPage } from './pages/TopicBuilderPage';
+import { ResourcesPage } from './pages/ResourcesPage';
+import { ResourceEditorPage } from './pages/ResourceEditorPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { TermsPage } from './pages/TermsPage';
 import { FaqPage } from './pages/FaqPage';
@@ -44,12 +46,14 @@ export function App({ initialTheme = 'light' }: AppProps) {
                 <Route element={<AppShell />}>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/community-posts" element={<CommunityPostsPage />} />
+                  <Route path="/topics" element={<TopicsPage />} />
+                  <Route path="/resources" element={<ResourcesPage />} />
+                  <Route path="/resources/new" element={<ResourceEditorPage />} />
+                  <Route path="/resources/edit/:id" element={<ResourceEditorPage />} />
                   <Route path="/users" element={<UserManagementPage />} />
                   <Route path="/messages" element={<AllMessagesPage />} />
                   <Route path="/reports" element={<ReportManagementPage />} />
-                  <Route path="/topics" element={<TopicsPage />} />
-                  <Route path="/topics/new" element={<TopicBuilderPage />} />
-                  <Route path="/topics/edit/:id" element={<TopicBuilderPage />} />
                   <Route path="/privacy" element={<PrivacyPolicyPage />} />
                   <Route path="/terms" element={<TermsPage />} />
                   <Route path="/faq" element={<FaqPage />} />
