@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   GaugeIcon,
-  LibraryIcon,
   ScaleIcon,
   SettingsIcon,
   ShieldCheckIcon,
@@ -12,16 +11,21 @@ import {
   UsersIcon,
   MessageSquareIcon,
   ShieldAlertIcon,
+  LayersIcon,
+  FileTextIcon,
+  MessageSquarePlusIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../utils/cn';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: GaugeIcon, hint: 'Overview' },
+  { to: '/community-posts', label: 'Community Posts', icon: MessageSquarePlusIcon, hint: 'Community' },
+  { to: '/topics', label: 'Topics', icon: LayersIcon, hint: 'Topics' },
+  { to: '/resources', label: 'Resources & Articles', icon: FileTextIcon, hint: 'Articles' },
   { to: '/users', label: 'User Management', icon: UsersIcon, hint: 'Users' },
   { to: '/messages', label: 'All Messages', icon: MessageSquareIcon, hint: 'Messages' },
   { to: '/reports', label: 'Reports', icon: ShieldAlertIcon, hint: 'Reports' },
-  { to: '/topics', label: 'Topics & Resources', icon: LibraryIcon, hint: 'Content' },
   { to: '/privacy', label: 'Privacy Policy', icon: ShieldCheckIcon, hint: 'Privacy' },
   { to: '/terms', label: 'Terms of Service', icon: ScaleIcon, hint: 'Terms' },
   { to: '/faq', label: 'FAQ & Help', icon: HelpCircleIcon, hint: 'FAQs' },
@@ -53,7 +57,7 @@ export function Sidebar() {
         </span>
       </div>
 
-      <nav className="flex-1 px-3 py-2" aria-label="Primary">
+      <nav className="flex-1 px-3 py-2 overflow-y-auto" aria-label="Primary">
         <ul className="space-y-1">
           {NAV.map(({ to, label, icon: Icon }) => (
             <li key={to}>
@@ -77,7 +81,7 @@ export function Sidebar() {
       </nav>
 
       {/* Logout button in sidebar footer */}
-      <div className="px-3 pb-1">
+      <div className="px-3 pb-3">
         <button
           type="button"
           onClick={handleLogout}
@@ -86,19 +90,6 @@ export function Sidebar() {
           <LogOutIcon className="h-4 w-4 shrink-0" />
           <span>Sign Out</span>
         </button>
-      </div>
-
-      <div className="m-3 rounded-xl border border-line bg-canvas p-3.5">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
-          </span>
-          <p className="text-[12px] font-semibold text-ink">Zero retention active</p>
-        </div>
-        <p className="mt-1.5 text-[11.5px] leading-snug text-body">
-          0 bytes of recipient data stored on disk. Buffer purged after delivery.
-        </p>
       </div>
     </aside>
   );

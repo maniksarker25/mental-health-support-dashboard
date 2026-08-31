@@ -1,86 +1,145 @@
 import React, { useMemo, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  CopyIcon,
   LibraryIcon,
   PencilIcon,
   PlusIcon,
   Trash2Icon,
-  EyeIcon,
-  LinkIcon,
-  ShieldCheckIcon,
-  LayersIcon,
+  FileTextIcon,
+  SparklesIcon,
 } from 'lucide-react';
 import { useAdminStore } from '../contexts/AdminStore';
 import { TONE_KEYS, TONE_META } from '../data/topics';
-import type { PublishStatus, ToneKey, TopicAndResource } from '../types';
+import type { IAdminTopic, ToneKey } from '../types';
 import { Card, SectionTitle } from '../components/ui/Card';
 import { Badge, ToneBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { Select } from '../components/ui/Field';
+import { Input, Select, Textarea } from '../components/ui/Field';
 import { Pagination, SearchInput, TableShell, Td, Th } from '../components/ui/Table';
 import { EmptyState, TableSkeleton } from '../components/ui/Skeleton';
 import { Modal } from '../components/ui/Sheet';
 import { Tooltip } from '../components/ui/Tooltip';
 import { DynamicIcon } from '../components/ui/DynamicIcon';
-import { WebsitePreviewModal } from '../components/topics/WebsitePreviewModal';
 import { paginate, useSimulatedLoad, useTableState } from '../hooks/useTableState';
 import { relativeTime } from '../utils/format';
 import { cn } from '../utils/cn';
 
+const AVAILABLE_ICONS = [
+  'Wind',
+  'CloudRain',
+  'BatteryLow',
+  'ShieldAlert',
+  'HeartCrack',
+  'Moon',
+  'Users',
+  'Repeat',
+  'PillBottle',
+  'Sparkles',
+  'Heart',
+  'Smile',
+];
+
 export function TopicsPage() {
   const navigate = useNavigate();
-  const { topics, saveTopic, deleteTopic, } = useAdminStore();
-  const loading = useSimulatedLoad(500);
-  const table = useTableState(6);
+  const { adminTopics, saveAdminTopic, deleteAdminTopic, articleResources } = useAdminStore();
+  const loading = useSimulatedLoad(400);
+  const table = useTableState(8);
 
   const [toneFilter, setToneFilter] = useState<ToneKey | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<PublishStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<'published' | 'draft' | 'all'>('all');
 
-  const [previewing, setPreviewing] = useState<TopicAndResource | null>(null);
-  const [deleting, setDeleting] = useState<TopicAndResource | null>(null);
+  // Create / Edit Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTopic, setEditingTopic] = useState<IAdminTopic | null>(null);
+
+  // Form fields
+  const [formName, setFormName] = useState('');
+  const [formTone, setFormTone] = useState<ToneKey>('sky');
+  const [formIcon, setFormIcon] = useState('Wind');
+  const [formDescription, setFormDescription] = useState('');
+  const [formStatus, setFormStatus] = useState<'published' | 'draft'>('published');
+
+  // Delete modal state
+  const [deletingTopic, setDeletingTopic] = useState<IAdminTopic | null>(null);
+
+  const openCreateModal = () => {
+    setEditingTopic(null);
+    setFormName('');
+    setFormTone('sky');
+    setFormIcon('Wind');
+    setFormDescription('');
+    setFormStatus('published');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (topic: IAdminTopic) => {
+    setEditingTopic(topic);
+    setFormName(topic.name);
+    setFormTone(topic.tone || 'sky');
+    setFormIcon(topic.icon || 'Wind');
+    setFormDescription(topic.description || '');
+    setFormStatus(topic.status || 'published');
+    setIsModalOpen(true);
+  };
+
+  const handleSaveTopic = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim()) {
+      toast.error('Please provide a topic name.');
+      return;
+    }
+
+    const topicData: IAdminTopic = {
+      id: editingTopic ? editingTopic.id : `topic-${Date.now()}`,
+      name: formName.trim(),
+      tone: formTone,
+      icon: formIcon,
+      description: formDescription.trim(),
+      status: formStatus,
+      createdAt: editingTopic ? editingTopic.createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    saveAdminTopic(topicData);
+    setIsModalOpen(false);
+    toast.success(editingTopic ? 'Topic updated successfully!' : 'New topic created successfully!');
+  };
 
   const filtered = useMemo(() => {
     const q = table.query.trim().toLowerCase();
-    return topics.filter((topic) => {
-      const topicName = (topic.topicTitle || topic.title || '').toLowerCase();
-      const resName = (topic.resourceTitle || topic.packetTitle || '').toLowerCase();
+    return adminTopics.filter((t) => {
       const matchesQuery =
         q.length === 0 ||
-        topicName.includes(q) ||
-        resName.includes(q);
+        t.name.toLowerCase().includes(q) ||
+        (t.description && t.description.toLowerCase().includes(q));
 
-      const matchesTone = toneFilter === 'all' || topic.tone === toneFilter;
-      const matchesStatus =
-        statusFilter === 'all' ||
-        topic.status === statusFilter ||
-        (statusFilter === 'published' && topic.isPublished) ||
-        (statusFilter === 'draft' && !topic.isPublished);
+      const matchesTone = toneFilter === 'all' || t.tone === toneFilter;
+      const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
 
       return matchesQuery && matchesTone && matchesStatus;
     });
-  }, [topics, table.query, toneFilter, statusFilter]);
+  }, [adminTopics, table.query, toneFilter, statusFilter]);
 
   const page = paginate(filtered, table.page, table.pageSize);
-  const publishedCount = topics.filter((t) => t.status === 'published' || t.isPublished).length;
-
-  const handleCopyLink = (topic: TopicAndResource) => {
-    const url = `${window.location.origin}/resource/${topic.id}`;
-    navigator.clipboard.writeText(url);
-    toast.success(`Copied receiver link for “${topic.topicTitle || topic.title}”`);
-  };
+  const publishedCount = adminTopics.filter((t) => t.status === 'published').length;
 
   return (
     <div className="space-y-6">
       <SectionTitle
-        title="Topics & Resource Webpages"
-        description={`${publishedCount} published, ${topics.length - publishedCount} in draft. Users select a topic in the app to dispatch an empathetic, multi-section web resource to their loved one.`}
+        title="Topic Management"
+        description={`${publishedCount} active topics, ${adminTopics.length - publishedCount} in draft. Topics categorize mental health guides and resources across the platform.`}
         action={
-          <Button onClick={() => navigate('/topics/new')}>
-            <PlusIcon className="h-4 w-4" />
-            New Topic & Resource
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={() => navigate('/resources')}>
+              <FileTextIcon className="h-4 w-4" />
+              Manage Resources
+            </Button>
+            <Button onClick={openCreateModal}>
+              <PlusIcon className="h-4 w-4" />
+              Create New Topic
+            </Button>
+          </div>
         }
       />
 
@@ -90,7 +149,7 @@ export function TopicsPage() {
           <SearchInput
             value={table.query}
             onChange={table.setQuery}
-            placeholder="Search topic or headline"
+            placeholder="Search topic name or keywords…"
             className="w-full sm:w-80"
           />
 
@@ -114,7 +173,7 @@ export function TopicsPage() {
             <div className="w-[150px]">
               <Select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as PublishStatus | 'all')}
+                onChange={(e) => setStatusFilter(e.target.value as 'published' | 'draft' | 'all')}
                 aria-label="Filter by status"
                 className="h-9 text-[13px]"
               >
@@ -125,18 +184,18 @@ export function TopicsPage() {
             </div>
 
             <p className="text-xs text-subtle ml-auto">
-              {filtered.length} of {topics.length} resources
+              {filtered.length} of {adminTopics.length} topics
             </p>
           </div>
         </div>
 
         {loading ? (
-          <TableSkeleton rows={6} columns={6} />
+          <TableSkeleton rows={6} columns={5} />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={<LibraryIcon className="h-4 w-4" />}
             title="No topics match your filters"
-            description="Try resetting your tone or search filters to see all available resources."
+            description="Try resetting your filters or create a new topic to get started."
             action={
               <Button
                 variant="secondary"
@@ -156,10 +215,9 @@ export function TopicsPage() {
             <TableShell>
               <thead>
                 <tr>
-                  <Th>Topic</Th>
-                  <Th>Tone</Th>
-                  <Th>Resource Webpage</Th>
-                  <Th align="center">Sections</Th>
+                  <Th>Topic Name</Th>
+                  <Th>Visual Tone</Th>
+                  <Th align="center">Articles</Th>
                   <Th>Status</Th>
                   <Th>Updated</Th>
                   <Th align="right">Actions</Th>
@@ -167,10 +225,10 @@ export function TopicsPage() {
               </thead>
               <tbody>
                 {page.rows.map((topic) => {
-                  const name = topic.topicTitle || topic.title || 'Untitled';
-                  const resHeadline = topic.resourceTitle || topic.packetTitle || name;
-                  const sectionsCount = (topic.sections || []).length;
-                  const isPublished = topic.status === 'published' || topic.isPublished;
+                  const isPublished = topic.status === 'published';
+                  const attachedCount = articleResources.filter(
+                    (r) => r.topicId === topic.id || r.topicName === topic.name
+                  ).length;
 
                   return (
                     <tr
@@ -185,12 +243,12 @@ export function TopicsPage() {
                               TONE_META[topic.tone]?.chip || ''
                             )}
                           >
-                            <DynamicIcon name={topic.icon || 'Leaf'} className="h-4 w-4" />
+                            <DynamicIcon name={topic.icon || 'Wind'} className="h-4 w-4" />
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate text-[13.5px] font-medium text-ink">{name}</p>
-                            {topic.shortDescription ? (
-                              <p className="line-clamp-1 text-[11.5px] text-subtle">{topic.shortDescription}</p>
+                            <p className="truncate text-[13.5px] font-medium text-ink">{topic.name}</p>
+                            {topic.description ? (
+                              <p className="line-clamp-1 text-[11.5px] text-subtle">{topic.description}</p>
                             ) : null}
                           </div>
                         </div>
@@ -200,19 +258,10 @@ export function TopicsPage() {
                         <ToneBadge tone={topic.tone} />
                       </Td>
 
-                      <Td className="max-w-[300px]">
-                        <div className="space-y-0.5">
-                          <p className="line-clamp-1 text-[13px] font-medium text-ink">{resHeadline}</p>
-                          <p className="line-clamp-1 font-mono text-[11px] text-primary">
-                            /resource/{topic.id}
-                          </p>
-                        </div>
-                      </Td>
-
                       <Td align="center">
-                        <span className="inline-flex items-center gap-1 font-mono text-[12.5px] text-ink">
-                          <LayersIcon className="h-3 w-3 text-subtle" />
-                          {sectionsCount}
+                        <span className="inline-flex items-center gap-1 font-mono text-[12.5px] text-ink font-medium">
+                          <FileTextIcon className="h-3.5 w-3.5 text-primary" />
+                          {attachedCount}
                         </span>
                       </Td>
 
@@ -223,45 +272,35 @@ export function TopicsPage() {
                       </Td>
 
                       <Td className="whitespace-nowrap text-[12.5px] text-subtle">
-                        {relativeTime(topic.updatedAt as string)}
+                        {relativeTime(topic.updatedAt)}
                       </Td>
 
                       <Td align="right">
                         <div className="flex items-center justify-end gap-1">
-                          <Tooltip label="Preview Website (Desktop & Mobile)">
+                          <Tooltip label="Create Resource for this Topic">
                             <button
-                              onClick={() => setPreviewing(topic)}
-                              aria-label={`Preview ${name} website`}
+                              onClick={() => navigate(`/resources/new?topicId=${topic.id}`)}
+                              aria-label={`Add article resource for ${topic.name}`}
                               className="rounded-md p-1.5 text-body transition-colors hover:bg-primary-tint hover:text-primary"
                             >
-                              <EyeIcon className="h-4 w-4" />
+                              <PlusIcon className="h-3.5 w-3.5" />
                             </button>
                           </Tooltip>
 
-                          <Tooltip label="Copy Public Link">
+                          <Tooltip label="Edit Topic">
                             <button
-                              onClick={() => handleCopyLink(topic)}
-                              aria-label={`Copy link for ${name}`}
-                              className="rounded-md p-1.5 text-body transition-colors hover:bg-primary-tint hover:text-primary"
-                            >
-                              <LinkIcon className="h-3.5 w-3.5" />
-                            </button>
-                          </Tooltip>
-
-                          <Tooltip label="Edit Topic & Sections">
-                            <button
-                              onClick={() => navigate(`/topics/edit/${topic.id}`)}
-                              aria-label={`Edit ${name}`}
+                              onClick={() => openEditModal(topic)}
+                              aria-label={`Edit ${topic.name}`}
                               className="rounded-md p-1.5 text-body transition-colors hover:bg-primary-tint hover:text-primary"
                             >
                               <PencilIcon className="h-3.5 w-3.5" />
                             </button>
                           </Tooltip>
 
-                          <Tooltip label="Delete">
+                          <Tooltip label="Delete Topic">
                             <button
-                              onClick={() => setDeleting(topic)}
-                              aria-label={`Delete ${name}`}
+                              onClick={() => setDeletingTopic(topic)}
+                              aria-label={`Delete ${topic.name}`}
                               className="rounded-md p-1.5 text-body transition-colors hover:bg-danger-bg hover:text-danger"
                             >
                               <Trash2Icon className="h-3.5 w-3.5" />
@@ -282,50 +321,142 @@ export function TopicsPage() {
               to={page.to}
               total={page.total}
               onPage={table.setPage}
-              unit="resources"
+              unit="topics"
             />
           </>
         )}
       </Card>
 
-      {/* Interactive Responsive Website Preview (Laptop / Tablet / Mobile) */}
-      <WebsitePreviewModal
-        open={Boolean(previewing)}
-        resource={previewing}
-        onClose={() => setPreviewing(null)}
-      />
+      {/* Create / Edit Topic Modal */}
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingTopic ? 'Edit Topic' : 'Create New Topic'}
+        description={
+          editingTopic
+            ? 'Update the topic name, visual tone palette, icon, and publish status.'
+            : 'Add a new topic for organizing clinically reviewed articles and resources.'
+        }
+      >
+        <form onSubmit={handleSaveTopic} className="space-y-4 pt-2">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-ink">
+              Topic Name *
+            </label>
+            <Input
+              required
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder="e.g. Anxiety & Panic, Sleep Health"
+              className="mt-1"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-ink">
+                Visual Tone
+              </label>
+              <Select
+                value={formTone}
+                onChange={(e) => setFormTone(e.target.value as ToneKey)}
+                className="mt-1"
+              >
+                {TONE_KEYS.map((k) => (
+                  <option key={k} value={k}>
+                    {TONE_META[k].label} ({TONE_META[k].usage})
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-ink">
+                Icon
+              </label>
+              <Select
+                value={formIcon}
+                onChange={(e) => setFormIcon(e.target.value)}
+                className="mt-1"
+              >
+                {AVAILABLE_ICONS.map((ico) => (
+                  <option key={ico} value={ico}>
+                    {ico}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-ink">
+              Status
+            </label>
+            <Select
+              value={formStatus}
+              onChange={(e) => setFormStatus(e.target.value as 'published' | 'draft')}
+              className="mt-1"
+            >
+              <option value="published">Published (Active)</option>
+              <option value="draft">Draft (Hidden)</option>
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-ink">
+              Short Description / Summary
+            </label>
+            <Textarea
+              rows={3}
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              placeholder="Brief summary of what this mental health topic covers…"
+              className="mt-1"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 border-t border-line pt-4">
+            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              {editingTopic ? 'Save Changes' : 'Create Topic'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal
-        open={Boolean(deleting)}
-        onClose={() => setDeleting(null)}
-        title="Delete this topic & resource?"
+        open={Boolean(deletingTopic)}
+        onClose={() => setDeletingTopic(null)}
+        title="Delete this topic?"
         description={
-          deleting
-            ? `“${deleting.topicTitle || deleting.title}” will be removed immediately.`
+          deletingTopic
+            ? `Are you sure you want to delete “${deletingTopic.name}”?`
             : ''
         }
         footer={
           <>
-            <Button variant="ghost" onClick={() => setDeleting(null)}>
-              Keep it
+            <Button variant="ghost" onClick={() => setDeletingTopic(null)}>
+              Cancel
             </Button>
             <Button
               variant="danger"
               onClick={() => {
-                if (!deleting) return;
-                deleteTopic(deleting.id);
-                toast.success(`“${deleting.topicTitle || deleting.title}” deleted`);
-                setDeleting(null);
+                if (!deletingTopic) return;
+                deleteAdminTopic(deletingTopic.id);
+                toast.success(`“${deletingTopic.name}” deleted`);
+                setDeletingTopic(null);
               }}
             >
-              Delete resource
+              Delete Topic
             </Button>
           </>
         }
       >
         <p className="text-[13.5px] leading-relaxed text-body">
-          Any recipient who already received this resource link will see a gentle sunset notice.
+          Deleting this topic will remove it from the active topic directory.
         </p>
       </Modal>
     </div>

@@ -27,6 +27,7 @@ export function JoditRichText({
     () => ({
       readonly: false,
       height,
+      minHeight: height,
       placeholder,
       theme: theme === 'dark' ? 'dark' : 'default',
       toolbarAdaptive: false,

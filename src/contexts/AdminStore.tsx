@@ -5,11 +5,16 @@ import { initialProfile } from '../data/system';
 import { initialUsers } from '../data/users';
 import { initialMessages } from '../data/messages';
 import { initialReports } from '../data/reports';
+import { initialAdminTopics, initialArticleResources } from '../data/articleResources';
+import { initialCommunityPosts } from '../data/communityPosts';
 import type {
   AdminMessage,
   AdminProfile,
   AppUser,
   Hotline,
+  IAdminCommunityPost,
+  IAdminTopic,
+  IArticleResource,
   LegalDoc,
   LegalDocId,
   MessageReport,
@@ -64,6 +69,25 @@ interface AdminStoreValue {
   resolveReport: (reportId: string, notes?: string) => void;
   dismissReport: (reportId: string, notes?: string) => void;
   blockReportedUser: (reportId: string, reason?: string) => void;
+
+  // Topic Management (Create / Update / Delete / Get)
+  adminTopics: IAdminTopic[];
+  saveAdminTopic: (topic: IAdminTopic) => void;
+  deleteAdminTopic: (id: string) => void;
+
+  // Resource Management (Select Topic, Title, Short Description, Jodit Editor HTML Article)
+  articleResources: IArticleResource[];
+  saveArticleResource: (res: IArticleResource) => void;
+  deleteArticleResource: (id: string) => void;
+  getArticleResource: (id: string) => IArticleResource | undefined;
+
+  // Community Post Moderation (Approve, Reject, Send Feedback for Update, Delete)
+  communityPosts: IAdminCommunityPost[];
+  approveCommunityPost: (id: string) => void;
+  rejectCommunityPost: (id: string, reason?: string) => void;
+  sendFeedbackCommunityPost: (id: string, feedback: string) => void;
+  deleteCommunityPost: (id: string) => void;
+  approveAllPendingCommunityPosts: () => number;
 }
 
 const AdminStoreContext = createContext<AdminStoreValue | null>(null);
@@ -86,6 +110,118 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   const [users, setUsers] = useState<AppUser[]>(initialUsers);
   const [messages, setMessages] = useState<AdminMessage[]>(initialMessages);
   const [reports, setReports] = useState<MessageReport[]>(initialReports);
+
+  // Topic Management (Create / Update / Delete / Get)
+  const [adminTopics, setAdminTopics] = useState<IAdminTopic[]>(initialAdminTopics);
+
+  // Resource Management (Select Topic, Title, Short Description, Jodit Editor HTML Article)
+  const [articleResources, setArticleResources] = useState<IArticleResource[]>(initialArticleResources);
+
+  const saveAdminTopic = useCallback((topicData: IAdminTopic) => {
+    setAdminTopics((prev) => {
+      const stamped = { ...topicData, updatedAt: nowIso() };
+      const exists = prev.some((t) => t.id === topicData.id);
+      return exists ? prev.map((t) => (t.id === topicData.id ? stamped : t)) : [stamped, ...prev];
+    });
+  }, []);
+
+  const deleteAdminTopic = useCallback((id: string) => {
+    setAdminTopics((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const saveArticleResource = useCallback((resData: IArticleResource) => {
+    setArticleResources((prev) => {
+      const stamped = { ...resData, updatedAt: nowIso() };
+      const exists = prev.some((r) => r.id === resData.id);
+      return exists ? prev.map((r) => (r.id === resData.id ? stamped : r)) : [stamped, ...prev];
+    });
+  }, []);
+
+  const deleteArticleResource = useCallback((id: string) => {
+    setArticleResources((prev) => prev.filter((r) => r.id !== id));
+  }, []);
+
+  const getArticleResource = useCallback(
+    (id: string) => {
+      return articleResources.find((r) => r.id === id);
+    },
+    [articleResources]
+  );
+
+  // Community Post Moderation (Approve, Reject, Send Feedback for Update, Delete)
+  const [communityPosts, setCommunityPosts] = useState<IAdminCommunityPost[]>(initialCommunityPosts);
+
+  const approveCommunityPost = useCallback((id: string) => {
+    setCommunityPosts((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              status: 'approved',
+              reviewedAt: nowIso(),
+              reviewedBy: 'Admin Moderator',
+              feedback: undefined,
+              rejectionReason: undefined,
+            }
+          : p
+      )
+    );
+  }, []);
+
+  const rejectCommunityPost = useCallback((id: string, reason?: string) => {
+    setCommunityPosts((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              status: 'rejected',
+              rejectionReason: reason || 'Post declined per community guidelines review.',
+              reviewedAt: nowIso(),
+              reviewedBy: 'Admin Moderator',
+            }
+          : p
+      )
+    );
+  }, []);
+
+  const sendFeedbackCommunityPost = useCallback((id: string, feedback: string) => {
+    setCommunityPosts((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              status: 'needs_update',
+              feedback: feedback.trim(),
+              reviewedAt: nowIso(),
+              reviewedBy: 'Admin Moderator',
+            }
+          : p
+      )
+    );
+  }, []);
+
+  const deleteCommunityPost = useCallback((id: string) => {
+    setCommunityPosts((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const approveAllPendingCommunityPosts = useCallback(() => {
+    let count = 0;
+    setCommunityPosts((prev) =>
+      prev.map((p) => {
+        if (p.status === 'pending' || p.status === 'needs_update') {
+          count++;
+          return {
+            ...p,
+            status: 'approved',
+            reviewedAt: nowIso(),
+            reviewedBy: 'Admin Moderator (Batch)',
+          };
+        }
+        return p;
+      })
+    );
+    return count;
+  }, []);
 
   const saveTopic = useCallback((topic: Topic) => {
     setTopics((prev) => {
@@ -455,6 +591,22 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       resolveReport,
       dismissReport,
       blockReportedUser,
+      // Topics
+      adminTopics,
+      saveAdminTopic,
+      deleteAdminTopic,
+      // Resources
+      articleResources,
+      saveArticleResource,
+      deleteArticleResource,
+      getArticleResource,
+      // Community Posts
+      communityPosts,
+      approveCommunityPost,
+      rejectCommunityPost,
+      sendFeedbackCommunityPost,
+      deleteCommunityPost,
+      approveAllPendingCommunityPosts,
     }),
     [
       topics,
@@ -484,6 +636,19 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       resolveReport,
       dismissReport,
       blockReportedUser,
+      adminTopics,
+      saveAdminTopic,
+      deleteAdminTopic,
+      articleResources,
+      saveArticleResource,
+      deleteArticleResource,
+      getArticleResource,
+      communityPosts,
+      approveCommunityPost,
+      rejectCommunityPost,
+      sendFeedbackCommunityPost,
+      deleteCommunityPost,
+      approveAllPendingCommunityPosts,
     ]
   );
 
