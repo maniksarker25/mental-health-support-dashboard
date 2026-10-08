@@ -212,3 +212,32 @@ export interface IAdminCommunityPost {
   reviewedAt?: string;
   reviewedBy?: string;
 }
+
+// -------------------------------------------------------------
+// Package Purchases & Consultation Dispatch Types
+// -------------------------------------------------------------
+export type PackageTierKey = 'basic' | 'standard' | 'premium';
+export type PurchaseStatus = 'completed' | 'pending' | 'refunded';
+
+export interface IPackagePurchase {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  packageTier: PackageTierKey;
+  packageName: string;
+  amount: number; // 49, 79, 149
+  currency: string;
+  paymentMethod: 'stripe' | 'apple_pay' | 'google_pay' | 'credit_card';
+  transactionId: string;
+  purchasedAt: string;
+  status: PurchaseStatus;
+  
+  // Premium consultation specifics
+  consultationLink?: string;
+  consultationSent: boolean;
+  consultationSentAt?: string;
+  consultationNotes?: string;
+  recipientContact?: string;
+  topicName?: string;
+}
