@@ -7,6 +7,7 @@ import { initialMessages } from '../data/messages';
 import { initialReports } from '../data/reports';
 import { initialAdminTopics, initialArticleResources } from '../data/articleResources';
 import { initialCommunityPosts } from '../data/communityPosts';
+import { initialPackagePurchases } from '../data/packagePurchases';
 import type {
   AdminMessage,
   AdminProfile,
@@ -15,6 +16,7 @@ import type {
   IAdminCommunityPost,
   IAdminTopic,
   IArticleResource,
+  IPackagePurchase,
   LegalDoc,
   LegalDocId,
   MessageReport,
@@ -88,6 +90,16 @@ interface AdminStoreValue {
   sendFeedbackCommunityPost: (id: string, feedback: string) => void;
   deleteCommunityPost: (id: string) => void;
   approveAllPendingCommunityPosts: () => number;
+
+  // Package Purchases & Consultation Link Dispatch
+  packagePurchases: IPackagePurchase[];
+  sendConsultationEmail: (
+    purchaseId: string,
+    consultationLink: string,
+    customMessage?: string
+  ) => void;
+  deletePackagePurchase: (purchaseId: string) => void;
+  refundPackagePurchase: (purchaseId: string) => void;
 }
 
 const AdminStoreContext = createContext<AdminStoreValue | null>(null);
@@ -116,6 +128,9 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
 
   // Resource Management (Select Topic, Title, Short Description, Jodit Editor HTML Article)
   const [articleResources, setArticleResources] = useState<IArticleResource[]>(initialArticleResources);
+
+  // Package Purchases
+  const [packagePurchases, setPackagePurchases] = useState<IPackagePurchase[]>(initialPackagePurchases);
 
   const saveAdminTopic = useCallback((topicData: IAdminTopic) => {
     setAdminTopics((prev) => {
@@ -221,6 +236,35 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       })
     );
     return count;
+  }, []);
+
+  const sendConsultationEmail = useCallback(
+    (purchaseId: string, consultationLink: string, customMessage?: string) => {
+      setPackagePurchases((prev) =>
+        prev.map((p) =>
+          p.id === purchaseId
+            ? {
+                ...p,
+                consultationLink: consultationLink.trim(),
+                consultationSent: true,
+                consultationSentAt: nowIso(),
+                consultationNotes: customMessage ? customMessage.trim() : p.consultationNotes,
+              }
+            : p
+        )
+      );
+    },
+    []
+  );
+
+  const deletePackagePurchase = useCallback((purchaseId: string) => {
+    setPackagePurchases((prev) => prev.filter((p) => p.id !== purchaseId));
+  }, []);
+
+  const refundPackagePurchase = useCallback((purchaseId: string) => {
+    setPackagePurchases((prev) =>
+      prev.map((p) => (p.id === purchaseId ? { ...p, status: 'refunded' as const } : p))
+    );
   }, []);
 
   const saveTopic = useCallback((topic: Topic) => {
@@ -607,6 +651,11 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       sendFeedbackCommunityPost,
       deleteCommunityPost,
       approveAllPendingCommunityPosts,
+      // Package Purchases & Consultation Link Dispatch
+      packagePurchases,
+      sendConsultationEmail,
+      deletePackagePurchase,
+      refundPackagePurchase,
     }),
     [
       topics,
@@ -649,6 +698,10 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       sendFeedbackCommunityPost,
       deleteCommunityPost,
       approveAllPendingCommunityPosts,
+      packagePurchases,
+      sendConsultationEmail,
+      deletePackagePurchase,
+      refundPackagePurchase,
     ]
   );
 

@@ -6,7 +6,6 @@ import {
   SettingsIcon,
   ShieldCheckIcon,
   HelpCircleIcon,
-  HeartIcon,
   LogOutIcon,
   UsersIcon,
   MessageSquareIcon,
@@ -14,12 +13,14 @@ import {
   LayersIcon,
   FileTextIcon,
   MessageSquarePlusIcon,
+  ShoppingBagIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../utils/cn';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: GaugeIcon, hint: 'Overview' },
+  { to: '/purchases', label: 'Package Purchases', icon: ShoppingBagIcon, hint: 'Purchases' },
   { to: '/community-posts', label: 'Community Posts', icon: MessageSquarePlusIcon, hint: 'Community' },
   { to: '/topics', label: 'Topics', icon: LayersIcon, hint: 'Topics' },
   { to: '/resources', label: 'Resources & Articles', icon: FileTextIcon, hint: 'Articles' },
@@ -44,12 +45,10 @@ export function Sidebar() {
   return (
     <aside className="hidden w-[248px] shrink-0 flex-col border-r border-line bg-surface lg:flex">
       <div className="flex items-center gap-2.5 px-5 py-5">
-        <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-primary text-primary-fg shadow-xs">
-          <HeartIcon className="h-[18px] w-[18px]" />
-        </span>
+        <img src="/logo.png" alt="Mental Health Anonymous logo" className="h-9 w-9 shrink-0 rounded-[10px] object-contain" />
         <span className="leading-tight">
-          <span className="block font-display text-[15px] font-bold text-ink">
-            Mental Health
+          <span className="block font-display text-[14px] font-bold text-ink">
+            Mental Health Anonymous
           </span>
           <span className="block text-[11px] uppercase tracking-[0.1em] text-subtle font-medium">
             Admin Console
