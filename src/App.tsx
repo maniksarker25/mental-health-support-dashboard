@@ -13,6 +13,7 @@ import { UserManagementPage } from './pages/UserManagementPage';
 import { AllMessagesPage } from './pages/AllMessagesPage';
 import { CommunityPostsPage } from './pages/CommunityPostsPage';
 import { ReportManagementPage } from './pages/ReportManagementPage';
+import { PackagePurchasesPage } from './pages/PackagePurchasesPage';
 import { TopicsPage } from './pages/Topics';
 import { ResourcesPage } from './pages/ResourcesPage';
 import { ResourceEditorPage } from './pages/ResourceEditorPage';
@@ -46,6 +47,7 @@ export function App({ initialTheme = 'light' }: AppProps) {
                 <Route element={<AppShell />}>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/purchases" element={<PackagePurchasesPage />} />
                   <Route path="/community-posts" element={<CommunityPostsPage />} />
                   <Route path="/topics" element={<TopicsPage />} />
                   <Route path="/resources" element={<ResourcesPage />} />

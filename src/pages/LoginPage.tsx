@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
-  HeartIcon,
   ShieldCheckIcon,
   LockIcon,
   MailIcon,
@@ -63,9 +62,7 @@ export function LoginPage() {
       <div className="relative w-full max-w-md space-y-6">
         {/* Branding Header */}
         <div className="text-center space-y-2">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-fg shadow-md shadow-primary/20">
-            <HeartIcon className="h-6 w-6" />
-          </div>
+          <img src="/logo.png" alt="Mental Health Anonymous logo" className="mx-auto h-16 w-16 object-contain" />
           <h1 className="font-display text-2xl font-bold text-ink">Mental Health Anonymous</h1>
           <p className="text-xs text-subtle">
             Admin console for crisis dispatch, topic authoring, and telemetry
