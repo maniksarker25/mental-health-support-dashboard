@@ -7,7 +7,6 @@ import {
   ArrowRightIcon,
   CheckCircle2Icon,
   SparklesIcon,
-  ShieldCheckIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
@@ -17,11 +16,11 @@ type Step = 'request' | 'sent' | 'reset' | 'completed';
 
 export function ForgotPasswordPage() {
   const navigate = useNavigate();
-  const { sendResetEmail, resetPassword } = useAuth();
+  const { sendResetEmail, resendResetCode, verifyResetCode, resetPassword } = useAuth();
 
   const [step, setStep] = useState<Step>('request');
-  const [email, setEmail] = useState('admin@mentalhealth.org');
-  const [code, setCode] = useState('988-247');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,10 +56,22 @@ export function ForgotPasswordPage() {
 
     setLoading(true);
     try {
-      const ok = await resetPassword(code, newPassword);
-      if (ok) {
+      const verified = await verifyResetCode(email, code);
+      if (!verified) return;
+      const reset = await resetPassword(email, newPassword, confirmPassword);
+      if (reset) {
         setStep('completed');
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setLoading(true);
+    try {
+      const resent = await resendResetCode(email);
+      if (resent) setCode('');
     } finally {
       setLoading(false);
     }
@@ -91,12 +102,12 @@ export function ForgotPasswordPage() {
               <div>
                 <h2 className="font-display text-base font-bold text-ink">Reset Your Password</h2>
                 <p className="text-[11.5px] text-subtle mt-0.5">
-                  Enter your registered administrator email to receive a secure recovery code.
+                  Enter your registered super-admin email to receive a secure recovery code.
                 </p>
               </div>
 
               <div>
-                <Label htmlFor="recovery-email">Administrator Email</Label>
+                <Label htmlFor="recovery-email">Super Admin Email</Label>
                 <div className="relative">
                   <MailIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
                   <Input
@@ -137,22 +148,28 @@ export function ForgotPasswordPage() {
               <div>
                 <h2 className="font-display text-base font-bold text-ink">Check Your Inbox</h2>
                 <p className="text-xs text-body mt-1">
-                  We sent recovery instructions and a 6-digit verification code to{' '}
+                  We sent a 6-digit verification code to{' '}
                   <span className="font-semibold text-ink">{email}</span>.
                 </p>
               </div>
 
-              <div className="rounded-xl border border-line bg-canvas/80 p-3.5 space-y-2 text-center">
-                <p className="text-[11px] text-subtle">
-                  Simulated Code: <span className="font-mono font-bold text-ink">988-247</span>
-                </p>
+              <div className="rounded-xl border border-line bg-canvas/80 p-3.5 text-center">
                 <button
                   type="button"
+                  disabled={loading}
                   onClick={() => setStep('reset')}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
                 >
                   <SparklesIcon className="h-3.5 w-3.5" />
-                  Proceed to Enter New Password
+                  Enter verification code
+                </button>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={handleResendCode}
+                  className="mt-2 block w-full text-xs font-medium text-body hover:text-ink disabled:opacity-50"
+                >
+                  {loading ? 'Sending…' : 'Resend code'}
                 </button>
               </div>
 
@@ -188,9 +205,13 @@ export function ForgotPasswordPage() {
                 <Label htmlFor="reset-code">Verification Code</Label>
                 <Input
                   id="reset-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  required
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="988-247"
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="6-digit code"
                   className="font-mono text-xs"
                 />
               </div>

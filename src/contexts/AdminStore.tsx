@@ -39,8 +39,6 @@ interface AdminStoreValue {
 
   profile: AdminProfile;
   saveProfile: (profile: AdminProfile) => void;
-  passwordUpdatedAt: string;
-  changePassword: (current: string, next: string) => { ok: boolean; message: string };
 
   // User Management
   users: AppUser[];
@@ -104,9 +102,6 @@ interface AdminStoreValue {
 
 const AdminStoreContext = createContext<AdminStoreValue | null>(null);
 
-/** Demo-only credential so the change-password flow can be exercised end to end. */
-const DEMO_PASSWORD = 'Anonymous2026!';
-
 const nowIso = () => new Date().toISOString();
 const uid = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -115,8 +110,6 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   const [legalDocs, setLegalDocs] = useState<LegalDoc[]>(initialLegalDocs);
   const [hotlines, setHotlines] = useState<Hotline[]>(initialHotlines);
   const [profile, setProfile] = useState<AdminProfile>(initialProfile);
-  const [password, setPassword] = useState(DEMO_PASSWORD);
-  const [passwordUpdatedAt, setPasswordUpdatedAt] = useState('2026-06-02T10:12:00Z');
 
   // New Entities
   const [users, setUsers] = useState<AppUser[]>(initialUsers);
@@ -326,21 +319,6 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         .join(''),
     });
   }, []);
-
-  const changePassword = useCallback(
-    (current: string, next: string) => {
-      if (current !== password) {
-        return { ok: false, message: 'Your current password is not correct.' };
-      }
-      if (next === password) {
-        return { ok: false, message: 'Choose a password you have not used before.' };
-      }
-      setPassword(next);
-      setPasswordUpdatedAt(nowIso());
-      return { ok: true, message: 'Password updated. Other sessions were signed out.' };
-    },
-    [password]
-  );
 
   // -------------------------------------------------------------
   // User Management Actions
@@ -615,8 +593,6 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       saveHotline,
       profile,
       saveProfile,
-      passwordUpdatedAt,
-      changePassword,
       // Users
       users,
       toggleUserBlock,
@@ -668,8 +644,6 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       saveHotline,
       profile,
       saveProfile,
-      passwordUpdatedAt,
-      changePassword,
       users,
       toggleUserBlock,
       setUserStatus,

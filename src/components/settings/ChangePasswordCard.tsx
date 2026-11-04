@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { EyeIcon, EyeOffIcon, KeyRoundIcon } from 'lucide-react';
-import { useAdminStore } from '../../contexts/AdminStore';
+import { useChangePasswordMutation } from '../../redux/api/authApi';
 import { Card, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input, Label } from '../ui/Field';
-import { relativeTime } from '../../utils/format';
 import { cn } from '../../utils/cn';
 
 interface Rule {
@@ -22,19 +21,18 @@ const RULES: Rule[] = [
 
 
 export function ChangePasswordCard() {
-  const { changePassword, passwordUpdatedAt } = useAdminStore();
+  const [changePassword, { isLoading }] = useChangePasswordMutation();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
   const [reveal, setReveal] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   const passed = RULES.filter((rule) => rule.test(next)).length;
   const strength = next.length === 0 ? 0 : passed;
   const strengthLabel = ['Too weak', 'Weak', 'Fair', 'Good', 'Strong'][strength];
 
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!current) {
       setError('Enter your current password.');
@@ -48,27 +46,39 @@ export function ChangePasswordCard() {
       setError('The confirmation does not match your new password.');
       return;
     }
-    setSaving(true);
-    setTimeout(() => {
-      const result = changePassword(current, next);
-      setSaving(false);
-      if (!result.ok) {
-        setError(result.message);
-        return;
-      }
+    try {
+      await changePassword({
+        oldPassword: current,
+        newPassword: next,
+        confirmNewPassword: confirm,
+      }).unwrap();
       setError(null);
       setCurrent('');
       setNext('');
       setConfirm('');
-      toast.success(result.message);
-    }, 420);
+      toast.success('Password updated successfully.');
+    } catch (requestError) {
+      if (
+        typeof requestError === 'object' &&
+        requestError !== null &&
+        'data' in requestError &&
+        typeof requestError.data === 'object' &&
+        requestError.data !== null &&
+        'message' in requestError.data &&
+        typeof requestError.data.message === 'string'
+      ) {
+        setError(requestError.data.message);
+      } else {
+        setError('Could not update your password. Please try again.');
+      }
+    }
   };
 
   return (
     <Card>
       <CardHeader
         title="Change password"
-        description={`Last changed ${relativeTime(passwordUpdatedAt)}. Changing it signs out every other session.`} />
+        description="Use your current password to set a new password for your super-admin account." />
       
       <form onSubmit={submit} className="space-y-4 p-5">
         <div>
@@ -91,9 +101,6 @@ export function ChangePasswordCard() {
               {reveal ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
             </button>
           </div>
-          <p className="mt-1 text-[11.5px] text-subtle">
-            Demo credential: <span className="font-mono">Anonymous2026!</span>
-          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -168,9 +175,9 @@ export function ChangePasswordCard() {
         {error ? <p className="text-[12px] text-danger">{error}</p> : null}
 
         <div className="flex justify-end border-t border-line pt-4">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={isLoading}>
             <KeyRoundIcon className="h-4 w-4" />
-            {saving ? 'Updating…' : 'Update password'}
+            {isLoading ? 'Updating…' : 'Update password'}
           </Button>
         </div>
       </form>
