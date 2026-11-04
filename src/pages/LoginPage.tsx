@@ -7,48 +7,48 @@ import {
   EyeIcon,
   EyeOffIcon,
   ArrowRightIcon,
-  SparklesIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input, Label } from '../components/ui/Field';
+
+interface LoginLocationState {
+  from?: {
+    pathname?: string;
+  };
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, login } = useAuth();
 
-  const [email, setEmail] = useState('admin@mentalhealth.org');
-  const [password, setPassword] = useState('Anonymous2026!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const redirectTo =
+    (location.state as LoginLocationState | null)?.from?.pathname || '/dashboard';
 
   // If already authenticated, redirect to dashboard or prior requested page
   useEffect(() => {
     if (isAuthenticated) {
-      const from = (location.state as any)?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
+      navigate(redirectTo, { replace: true });
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [isAuthenticated, navigate, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const ok = await login(email, password);
+      const ok = await login(email, password, rememberMe);
       if (ok) {
-        const from = (location.state as any)?.from?.pathname || '/dashboard';
-        navigate(from, { replace: true });
+        navigate(redirectTo, { replace: true });
       }
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleFillDemo = () => {
-    setEmail('admin@mentalhealth.org');
-    setPassword('Anonymous2026!');
   };
 
   return (
@@ -65,7 +65,7 @@ export function LoginPage() {
           <img src="/logo.png" alt="Mental Health Anonymous logo" className="mx-auto h-16 w-16 object-contain" />
           <h1 className="font-display text-2xl font-bold text-ink">Mental Health Anonymous</h1>
           <p className="text-xs text-subtle">
-            Admin console for crisis dispatch, topic authoring, and telemetry
+            Super-admin console for platform management
           </p>
         </div>
 
@@ -74,10 +74,10 @@ export function LoginPage() {
           <div className="border-b border-line pb-4 flex items-center justify-between">
             <div>
               <h2 className="font-display text-base font-bold text-ink">Sign In</h2>
-              <p className="text-[11.5px] text-subtle">Access your administrative account</p>
+              <p className="text-[11.5px] text-subtle">Sign in with your super-admin account</p>
             </div>
             <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              <ShieldCheckIcon className="h-3 w-3" /> Zero Retention
+              <ShieldCheckIcon className="h-3 w-3" /> API Sign-In
             </span>
           </div>
 
@@ -92,7 +92,7 @@ export function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@mentalhealth.org"
+                  placeholder="Administrator email"
                   className="pl-9 text-xs"
                 />
               </div>
@@ -152,25 +152,16 @@ export function LoginPage() {
             </Button>
           </form>
 
-          {/* Quick Demo Helper */}
           <div className="rounded-xl border border-line bg-canvas/80 p-3.5 space-y-2 text-center">
             <p className="text-[11px] text-subtle">
-              Demo Credentials: <span className="font-mono text-ink font-semibold">admin@mentalhealth.org</span> / <span className="font-mono text-ink font-semibold">Anonymous2026!</span>
+              Only an active super-admin account can access this dashboard.
             </p>
-            <button
-              type="button"
-              onClick={handleFillDemo}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
-            >
-              <SparklesIcon className="h-3 w-3" />
-              Fill Demo Credentials
-            </button>
           </div>
         </div>
 
         {/* Footer Security Notice */}
         <p className="text-center text-[11px] text-subtle">
-          Protected by end-to-end ephemeral session authentication.
+          Sign-in is verified by the mental-health backend.
         </p>
       </div>
     </div>

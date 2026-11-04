@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -7,11 +7,16 @@ import {
   PlusIcon,
   Trash2Icon,
   FileTextIcon,
-  SparklesIcon,
 } from 'lucide-react';
 import { useAdminStore } from '../contexts/AdminStore';
 import { TONE_KEYS, TONE_META } from '../data/topics';
-import type { IAdminTopic, ToneKey } from '../types';
+import type { IAdminTopic, ToneKey, TopicRecord } from '../types';
+import {
+  useCreateTopicMutation,
+  useDeleteTopicMutation,
+  useGetTopicsQuery,
+  useUpdateTopicMutation,
+} from '../redux/api/topicApi';
 import { Card, SectionTitle } from '../components/ui/Card';
 import { Badge, ToneBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -21,7 +26,7 @@ import { EmptyState, TableSkeleton } from '../components/ui/Skeleton';
 import { Modal } from '../components/ui/Sheet';
 import { Tooltip } from '../components/ui/Tooltip';
 import { DynamicIcon } from '../components/ui/DynamicIcon';
-import { paginate, useSimulatedLoad, useTableState } from '../hooks/useTableState';
+import { useTableState } from '../hooks/useTableState';
 import { relativeTime } from '../utils/format';
 import { cn } from '../utils/cn';
 
@@ -40,14 +45,61 @@ const AVAILABLE_ICONS = [
   'Smile',
 ];
 
+function toDashboardTopic(topic: TopicRecord): IAdminTopic {
+  return {
+    id: topic._id,
+    name: topic.name,
+    tone: topic.tone,
+    icon: topic.icon,
+    description: topic.shortDescription,
+    status: 'published',
+    createdAt: topic.createdAt,
+    updatedAt: topic.updatedAt,
+  };
+}
+
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'object' && error !== null) {
+    if ('data' in error && typeof error.data === 'object' && error.data !== null) {
+      if ('message' in error.data && typeof error.data.message === 'string') {
+        return error.data.message;
+      }
+    }
+    if ('error' in error && typeof error.error === 'string') {
+      return error.error;
+    }
+  }
+  return fallback;
+}
+
 export function TopicsPage() {
   const navigate = useNavigate();
-  const { adminTopics, saveAdminTopic, deleteAdminTopic, articleResources } = useAdminStore();
-  const loading = useSimulatedLoad(400);
+  const { articleResources } = useAdminStore();
   const table = useTableState(8);
 
   const [toneFilter, setToneFilter] = useState<ToneKey | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<'published' | 'draft' | 'all'>('all');
+  const {
+    data: topicResponse,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch,
+  } = useGetTopicsQuery({
+    page: table.page,
+    limit: table.pageSize,
+    ...(table.query.trim() ? { searchTerm: table.query.trim() } : {}),
+    ...(toneFilter !== 'all' ? { tone: toneFilter } : {}),
+  });
+  const [createTopic, { isLoading: isCreating }] = useCreateTopicMutation();
+  const [updateTopic, { isLoading: isUpdating }] = useUpdateTopicMutation();
+  const [deleteTopic, { isLoading: isDeleting }] = useDeleteTopicMutation();
+  const topics = topicResponse?.data.map(toDashboardTopic) ?? [];
+  const totalTopics = topicResponse?.meta.total ?? 0;
+  const totalPages = Math.max(1, topicResponse?.meta.totalPages ?? 1);
+  const currentPage = topicResponse?.meta.page ?? table.page;
+  const from = totalTopics === 0 ? 0 : (currentPage - 1) * table.pageSize + 1;
+  const to = Math.min(currentPage * table.pageSize, totalTopics);
 
   // Create / Edit Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,7 +110,6 @@ export function TopicsPage() {
   const [formTone, setFormTone] = useState<ToneKey>('sky');
   const [formIcon, setFormIcon] = useState('Wind');
   const [formDescription, setFormDescription] = useState('');
-  const [formStatus, setFormStatus] = useState<'published' | 'draft'>('published');
 
   // Delete modal state
   const [deletingTopic, setDeletingTopic] = useState<IAdminTopic | null>(null);
@@ -69,7 +120,6 @@ export function TopicsPage() {
     setFormTone('sky');
     setFormIcon('Wind');
     setFormDescription('');
-    setFormStatus('published');
     setIsModalOpen(true);
   };
 
@@ -79,56 +129,59 @@ export function TopicsPage() {
     setFormTone(topic.tone || 'sky');
     setFormIcon(topic.icon || 'Wind');
     setFormDescription(topic.description || '');
-    setFormStatus(topic.status || 'published');
     setIsModalOpen(true);
   };
 
-  const handleSaveTopic = (e: React.FormEvent) => {
+  const handleSaveTopic = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) {
       toast.error('Please provide a topic name.');
       return;
     }
+    if (!formDescription.trim()) {
+      toast.error('Please provide a short description.');
+      return;
+    }
 
-    const topicData: IAdminTopic = {
-      id: editingTopic ? editingTopic.id : `topic-${Date.now()}`,
+    const body = {
       name: formName.trim(),
       tone: formTone,
       icon: formIcon,
-      description: formDescription.trim(),
-      status: formStatus,
-      createdAt: editingTopic ? editingTopic.createdAt : new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      shortDescription: formDescription.trim(),
     };
 
-    saveAdminTopic(topicData);
-    setIsModalOpen(false);
-    toast.success(editingTopic ? 'Topic updated successfully!' : 'New topic created successfully!');
+    try {
+      if (editingTopic) {
+        await updateTopic({ id: editingTopic.id, body }).unwrap();
+        toast.success('Topic updated successfully!');
+      } else {
+        await createTopic(body).unwrap();
+        table.setPage(1);
+        toast.success('New topic created successfully!');
+      }
+      setIsModalOpen(false);
+    } catch (saveError) {
+      toast.error(getApiErrorMessage(saveError, 'Could not save the topic.'));
+    }
   };
 
-  const filtered = useMemo(() => {
-    const q = table.query.trim().toLowerCase();
-    return adminTopics.filter((t) => {
-      const matchesQuery =
-        q.length === 0 ||
-        t.name.toLowerCase().includes(q) ||
-        (t.description && t.description.toLowerCase().includes(q));
-
-      const matchesTone = toneFilter === 'all' || t.tone === toneFilter;
-      const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
-
-      return matchesQuery && matchesTone && matchesStatus;
-    });
-  }, [adminTopics, table.query, toneFilter, statusFilter]);
-
-  const page = paginate(filtered, table.page, table.pageSize);
-  const publishedCount = adminTopics.filter((t) => t.status === 'published').length;
+  const handleDeleteTopic = async () => {
+    if (!deletingTopic) return;
+    try {
+      await deleteTopic(deletingTopic.id).unwrap();
+      toast.success(`“${deletingTopic.name}” deleted`);
+      setDeletingTopic(null);
+      table.setPage(1);
+    } catch (deleteError) {
+      toast.error(getApiErrorMessage(deleteError, 'Could not delete the topic.'));
+    }
+  };
 
   return (
     <div className="space-y-6">
       <SectionTitle
         title="Topic Management"
-        description={`${publishedCount} active topics, ${adminTopics.length - publishedCount} in draft. Topics categorize mental health guides and resources across the platform.`}
+        description={`${totalTopics} active topics. Topics categorize mental health guides and resources across the platform.`}
         action={
           <div className="flex items-center gap-2">
             <Button variant="secondary" onClick={() => navigate('/resources')}>
@@ -157,7 +210,10 @@ export function TopicsPage() {
             <div className="w-[150px]">
               <Select
                 value={toneFilter}
-                onChange={(e) => setToneFilter(e.target.value as ToneKey | 'all')}
+                onChange={(e) => {
+                  setToneFilter(e.target.value as ToneKey | 'all');
+                  table.setPage(1);
+                }}
                 aria-label="Filter by tone"
                 className="h-9 text-[13px]"
               >
@@ -170,31 +226,29 @@ export function TopicsPage() {
               </Select>
             </div>
 
-            <div className="w-[150px]">
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as 'published' | 'draft' | 'all')}
-                aria-label="Filter by status"
-                className="h-9 text-[13px]"
-              >
-                <option value="all">All statuses</option>
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
-              </Select>
-            </div>
-
             <p className="text-xs text-subtle ml-auto">
-              {filtered.length} of {adminTopics.length} topics
+              {topics.length} of {totalTopics} topics
             </p>
           </div>
         </div>
 
-        {loading ? (
+        {isLoading || isFetching ? (
           <TableSkeleton rows={6} columns={5} />
-        ) : filtered.length === 0 ? (
+        ) : isError ? (
           <EmptyState
             icon={<LibraryIcon className="h-4 w-4" />}
-            title="No topics match your filters"
+            title="Could not load topics"
+            description={getApiErrorMessage(error, 'Check the API connection and try again.')}
+            action={
+              <Button variant="secondary" size="sm" onClick={() => refetch()}>
+                Try again
+              </Button>
+            }
+          />
+        ) : topics.length === 0 ? (
+          <EmptyState
+            icon={<LibraryIcon className="h-4 w-4" />}
+            title={table.query || toneFilter !== 'all' ? 'No topics match your filters' : 'No topics yet'}
             description="Try resetting your filters or create a new topic to get started."
             action={
               <Button
@@ -203,7 +257,6 @@ export function TopicsPage() {
                 onClick={() => {
                   table.setQuery('');
                   setToneFilter('all');
-                  setStatusFilter('all');
                 }}
               >
                 Clear filters
@@ -224,8 +277,7 @@ export function TopicsPage() {
                 </tr>
               </thead>
               <tbody>
-                {page.rows.map((topic) => {
-                  const isPublished = topic.status === 'published';
+                {topics.map((topic) => {
                   const attachedCount = articleResources.filter(
                     (r) => r.topicId === topic.id || r.topicName === topic.name
                   ).length;
@@ -266,9 +318,7 @@ export function TopicsPage() {
                       </Td>
 
                       <Td>
-                        <Badge tone={isPublished ? 'success' : 'warning'}>
-                          {isPublished ? 'Published' : 'Draft'}
-                        </Badge>
+                        <Badge tone="success">Active</Badge>
                       </Td>
 
                       <Td className="whitespace-nowrap text-[12.5px] text-subtle">
@@ -315,11 +365,11 @@ export function TopicsPage() {
             </TableShell>
 
             <Pagination
-              page={page.safePage}
-              totalPages={page.totalPages}
-              from={page.from}
-              to={page.to}
-              total={page.total}
+              page={currentPage}
+              totalPages={totalPages}
+              from={from}
+              to={to}
+              total={totalTopics}
               onPage={table.setPage}
               unit="topics"
             />
@@ -334,8 +384,8 @@ export function TopicsPage() {
         title={editingTopic ? 'Edit Topic' : 'Create New Topic'}
         description={
           editingTopic
-            ? 'Update the topic name, visual tone palette, icon, and publish status.'
-            : 'Add a new topic for organizing clinically reviewed articles and resources.'
+            ? 'Update the topic name, visual tone, icon, and short description.'
+            : 'Add a topic for organizing mental health guides and resources.'
         }
       >
         <form onSubmit={handleSaveTopic} className="space-y-4 pt-2">
@@ -390,23 +440,10 @@ export function TopicsPage() {
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-ink">
-              Status
-            </label>
-            <Select
-              value={formStatus}
-              onChange={(e) => setFormStatus(e.target.value as 'published' | 'draft')}
-              className="mt-1"
-            >
-              <option value="published">Published (Active)</option>
-              <option value="draft">Draft (Hidden)</option>
-            </Select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-ink">
-              Short Description / Summary
+              Short Description / Summary *
             </label>
             <Textarea
+              required
               rows={3}
               value={formDescription}
               onChange={(e) => setFormDescription(e.target.value)}
@@ -419,8 +456,12 @@ export function TopicsPage() {
             <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">
-              {editingTopic ? 'Save Changes' : 'Create Topic'}
+            <Button type="submit" disabled={isCreating || isUpdating}>
+              {isCreating || isUpdating
+                ? 'Saving…'
+                : editingTopic
+                  ? 'Save Changes'
+                  : 'Create Topic'}
             </Button>
           </div>
         </form>
@@ -443,14 +484,10 @@ export function TopicsPage() {
             </Button>
             <Button
               variant="danger"
-              onClick={() => {
-                if (!deletingTopic) return;
-                deleteAdminTopic(deletingTopic.id);
-                toast.success(`“${deletingTopic.name}” deleted`);
-                setDeletingTopic(null);
-              }}
+              onClick={handleDeleteTopic}
+              disabled={isDeleting}
             >
-              Delete Topic
+              {isDeleting ? 'Deleting…' : 'Delete Topic'}
             </Button>
           </>
         }
